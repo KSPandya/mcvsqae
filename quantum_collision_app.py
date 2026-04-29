@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.stats import multivariate_normal
+from scipy.stats import norm
 from sgp4.api import Satrec, jday
 import plotly.graph_objects as go
 import plotly.express as px
@@ -432,7 +433,19 @@ if run_btn:
                      R_hbr, epsilon, alpha_ci, q_dim)
             t_q     = time.perf_counter() - t_q_start
         
-            mc_equiv = int(np.ceil(1.0 / epsilon**2))
+            p_est = qres["pc"]
+            # Calculate the actual error margin IQAE achieved (half the CI width)
+            iqae_margin = max((qres["ci"][1] - qres["ci"][0]) / 2.0, 1e-12)
+            
+            if p_est > 0.0 and p_est < 1.0:
+                # Calculate the Z-score for your chosen confidence level (e.g., 95% -> ~1.96)
+                z_score = norm.ppf(1.0 - (1.0 - alpha_ci / 100.0) / 2.0)
+                # Exact classical MC samples needed to achieve the same variance
+                mc_equiv = int(np.ceil((z_score**2 * p_est * (1.0 - p_est)) / (iqae_margin**2)))
+            else:
+                # Fallback to worst-case Hoeffding bound if the probability is exactly 0
+                mc_equiv = int(np.ceil(1.0 / epsilon**2))
+
             speedup  = mc_equiv / max(qres["queries"], 1)
 
             st.session_state.results = dict(
