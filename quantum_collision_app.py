@@ -521,8 +521,7 @@ with tabs[0]:
   </div>
 </div>
 """, unsafe_allow_html=True)
-if np.sqrt(mu_r_phys**2 + mu_s_phys**2) > 10 * max(sig_r_phys, sig_s_phys):
-    st.warning("Far-field encounter → Pc ≈ 0 (numerically negligible)")
+
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — SGP4 PROPAGATION
 # ══════════════════════════════════════════════════════════════════════════════
