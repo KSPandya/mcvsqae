@@ -414,6 +414,7 @@ if run_btn:
                 # Use the manual sliders so we can force a close-approach scenario
                 mu_r_phys = mu_r
                 mu_s_phys = mu_s
+                miss_km = np.sqrt(mu_r**2 + mu_s**2) / 1000.0
             else:
                 # Use the true orbital physics
                 mu_r_phys = dr_R * 1000
