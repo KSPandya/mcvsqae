@@ -219,7 +219,7 @@ with st.sidebar:
         R_hbr         = 115.0
 
     st.markdown("---")
-    use_override=0
+    
     # ── Quantum Parameters ────────────────────────────────────────────────
     st.markdown('<div class="sidebar-label">⚛ Quantum (IQAE)</div>', unsafe_allow_html=True)
     epsilon   = st.select_slider("Target precision ε",
@@ -392,16 +392,7 @@ if run_btn:
             r1, v1 = sgp4_state(sat1, jd_tca, fr_tca)
             r2, v2 = sgp4_state(sat2, jd_tca, fr_tca)
 
-            # Use override geometry if selected
-            if use_override:
-			    eff_mu_r, eff_mu_s   = 20.0, 30.0
-			    eff_sig_r, eff_sig_s = 60.0, 250.0
-			    eff_R                = 115.0
-			else:
-			    eff_mu_r, eff_mu_s   = mu_r, mu_s
-			    eff_sig_r, eff_sig_s = sig_r, sig_s
-			    eff_R                = R_hbr
-
+          
             st.write(f"🎲 Running Monte Carlo  (N = {mc_N:,}) …")
             t_mc_start = time.perf_counter()
             pc_mc   = classical_mc(eff_mu_r, eff_mu_s, eff_sig_r, eff_sig_s, eff_R, mc_N)
@@ -409,8 +400,7 @@ if run_btn:
 
             st.write(f"⚛ Running Quantum IQAE  (ε = {epsilon}, grid = {2**q_dim}×{2**q_dim}) …")
             t_q_start = time.perf_counter()
-            qres    = quantum_iqae(eff_mu_r, eff_mu_s, eff_sig_r, eff_sig_s,
-                                   eff_R, epsilon, alpha_ci, q_dim)
+            qres    = quantum_iqae(mu_r, mu_s, sig_r, sig_s, R_hbr, epsilon, alpha_ci, q_dim)
             t_q     = time.perf_counter() - t_q_start
 	    
             mc_equiv = int(np.ceil(1.0 / epsilon**2))
