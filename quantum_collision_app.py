@@ -395,7 +395,7 @@ if run_btn:
           
             st.write(f"🎲 Running Monte Carlo  (N = {mc_N:,}) …")
             t_mc_start = time.perf_counter()
-            pc_mc   = classical_mc(mu_r, mu_s, sig_r, sig_s, R, N)
+            pc_mc   = classical_mc(mu_r, mu_s, sig_r, sig_s, R_hbr, N)
             t_mc    = time.perf_counter() - t_mc_start
 
             st.write(f"⚛ Running Quantum IQAE  (ε = {epsilon}, grid = {2**q_dim}×{2**q_dim}) …")
@@ -411,7 +411,7 @@ if run_btn:
                 miss_km=miss_km, best_t_s=best_t, t_tca=t_tca,
                 r1=r1, v1=v1, r2=r2, v2=v2,
                 mu_r=mu_r, mu_s=mu_s,
-                sig_r=sig_r, sig_s=sig_s, R_hbr=R,
+                sig_r=sig_r, sig_s=sig_s, R_hbr=R_hbr,
                 pc_mc=pc_mc, t_mc=t_mc,
                 qres=qres, t_q=t_q,
                 mc_equiv=mc_equiv, speedup=speedup,
