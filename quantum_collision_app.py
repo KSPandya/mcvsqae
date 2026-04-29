@@ -205,18 +205,18 @@ with st.sidebar:
     st.markdown("---")
 
     # ── Encounter Geometry override ───────────────────────────────────────
-    #st.markdown('<div class="sidebar-label">📐 Encounter Geometry</div>', unsafe_allow_html=True)
-    #use_override = st.toggle("Override with custom geometry", value=True, help="Force a specific near-miss for demonstration")
-    #if use_override:
-     #   mu_r  = st.slider("Miss distance — Radial (m)",   -200, 200,  20, 5)
-      #  mu_s  = st.slider("Miss distance — Along-track (m)", -500, 500, 30, 10)
-       # sig_r = st.slider("σ Radial (m)",   10, 200,  60, 5)
-        #sig_s = st.slider("σ Along-track (m)", 50, 600, 250, 10)
-        #R_hbr = st.slider("Hard-body Radius (m)",  10, 300, 115, 5)
-    #else:
-     #   mu_r, mu_s    = 20.0, 30.0
-      #  sig_r, sig_s  = 60.0, 250.0
-      #  R_hbr         = 115.0
+    st.markdown('<div class="sidebar-label">📐 Encounter Geometry</div>', unsafe_allow_html=True)
+    use_override = st.toggle("Override with custom geometry", value=True, help="Force a specific near-miss for demonstration")
+    if use_override:
+        mu_r  = st.slider("Miss distance — Radial (m)",   -500, 1000,  150, 10)
+        mu_s  = st.slider("Miss distance — Along-track (m)", -1500, 1500, 250, 20)
+        sig_r = st.slider("σ Radial (m)",   10, 200,  60, 5)
+        sig_s = st.slider("σ Along-track (m)", 50, 600, 250, 10)
+        R_hbr = st.slider("Hard-body Radius (m)",  10, 300, 115, 5)
+    else:
+        mu_r, mu_s    = 150.0, 250.0
+        sig_r, sig_s  = 60.0, 250.0
+        R_hbr         = 115.0
 
     st.markdown("---")
     use_override=0
