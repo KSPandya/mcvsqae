@@ -206,7 +206,7 @@ with st.sidebar:
 
     # ── Encounter Geometry override ───────────────────────────────────────
     st.markdown('<div class="sidebar-label">📐 Encounter Geometry</div>', unsafe_allow_html=True)
-    use_override = st.toggle("Override with custom geometry", value=True, help="Force a specific near-miss for demonstration")
+    use_override = st.toggle("Override with custom geometry", value=False, help="Force a specific near-miss for demonstration")
     if use_override:
         mu_r  = st.slider("Miss distance — Radial (m)",   -500, 1000,  150, 10)
         mu_s  = st.slider("Miss distance — Along-track (m)", -1500, 1500, 250, 20)
@@ -293,8 +293,9 @@ def quantum_iqae(mu_r, mu_s, sig_r, sig_s, R, epsilon, alpha, q_dim):
     G    = 2 ** q_dim
     n_q  = q_dim * 2
     span = 4.0 * max(sig_r, sig_s)
-    r_v  = np.linspace(-span, span, G)
-    s_v  = np.linspace(-span, span, G)
+
+	r_v  = np.linspace(mu_r - span, mu_r + span, G)
+	s_v  = np.linspace(mu_s - span, mu_s + span, G)
     R_g, S_g = np.meshgrid(r_v, s_v, indexing='ij')
 
     cov = np.array([[sig_r**2, 0], [0, sig_s**2]])
@@ -391,16 +392,37 @@ if run_btn:
 
             r1, v1 = sgp4_state(sat1, jd_tca, fr_tca)
             r2, v2 = sgp4_state(sat2, jd_tca, fr_tca)
-
-          
+			def rsw_frame(r1, v1, r2, v2):
+			    delta = r2 - r1
+			
+			    R_hat = r1 / np.linalg.norm(r1)
+			    W_hat = np.cross(r1, v1)
+			    W_hat /= np.linalg.norm(W_hat)
+			    S_hat = np.cross(W_hat, R_hat)
+			
+			    dr_R = np.dot(delta, R_hat)
+			    dr_S = np.dot(delta, S_hat)
+			
+			    return dr_R, dr_S
+			          
             st.write(f"🎲 Running Monte Carlo  (N = {mc_N:,}) …")
             t_mc_start = time.perf_counter()
-            pc_mc   = classical_mc(mu_r, mu_s, sig_r, sig_s, R_hbr, mc_N)
+            dr_R, dr_S = rsw_frame(r1, v1, r2, v2)
+
+			mu_r_phys = dr_R * 1000
+			mu_s_phys = dr_S * 1000
+			
+			# use uncertainties (keep sliders if you want)
+			sig_r_phys = sig_r
+			sig_s_phys = sig_s
+			
+			pc_mc = classical_mc(mu_r_phys, mu_s_phys, sig_r_phys, sig_s_phys, R_hbr, mc_N)
             t_mc    = time.perf_counter() - t_mc_start
 
             st.write(f"⚛ Running Quantum IQAE  (ε = {epsilon}, grid = {2**q_dim}×{2**q_dim}) …")
             t_q_start = time.perf_counter()
-            qres    = quantum_iqae(mu_r, mu_s, sig_r, sig_s, R_hbr, epsilon, alpha_ci, q_dim)
+            qres  = quantum_iqae(mu_r_phys, mu_s_phys, sig_r_phys, sig_s_phys,
+                     R_hbr, epsilon, alpha_ci, q_dim)
             t_q     = time.perf_counter() - t_q_start
 	    
             mc_equiv = int(np.ceil(1.0 / epsilon**2))
@@ -500,7 +522,8 @@ with tabs[0]:
   </div>
 </div>
 """, unsafe_allow_html=True)
-
+if np.sqrt(mu_r_phys**2 + mu_s_phys**2) > 10 * max(sig_r_phys, sig_s_phys):
+    st.warning("Far-field encounter → Pc ≈ 0 (numerically negligible)")
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — SGP4 PROPAGATION
 # ══════════════════════════════════════════════════════════════════════════════
