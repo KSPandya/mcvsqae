@@ -408,10 +408,17 @@ if run_btn:
             t_mc_start = time.perf_counter()
             dr_R, dr_S = rsw_frame(r1, v1, r2, v2)
 
-            mu_r_phys = dr_R * 1000
-            mu_s_phys = dr_S * 1000
+            dr_R, dr_S = rsw_frame(r1, v1, r2, v2)
+
+            if use_override:
+                # Use the manual sliders so we can force a close-approach scenario
+                mu_r_phys = mu_r
+                mu_s_phys = mu_s
+            else:
+                # Use the true orbital physics
+                mu_r_phys = dr_R * 1000
+                mu_s_phys = dr_S * 1000
             
-            # use uncertainties (keep sliders if you want)
             sig_r_phys = sig_r
             sig_s_phys = sig_s
             
