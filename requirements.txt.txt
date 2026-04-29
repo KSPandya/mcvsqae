@@ -1,0 +1,9 @@
+streamlit
+sgp4
+qiskit
+qiskit-aer
+qiskit-algorithms
+numpy
+scipy
+matplotlib
+plotly
