@@ -393,9 +393,14 @@ if run_btn:
             r2, v2 = sgp4_state(sat2, jd_tca, fr_tca)
 
             # Use override geometry if selected
-            eff_mu_r, eff_mu_s   = (mu_r, mu_s)     if use_override else (20.0, 30.0)
-            eff_sig_r, eff_sig_s = (sig_r, sig_s)   if use_override else (60.0, 250.0)
-            eff_R                = R_hbr             if use_override else 115.0
+            if use_override:
+			    eff_mu_r, eff_mu_s   = 20.0, 30.0
+			    eff_sig_r, eff_sig_s = 60.0, 250.0
+			    eff_R                = 115.0
+			else:
+			    eff_mu_r, eff_mu_s   = mu_r, mu_s
+			    eff_sig_r, eff_sig_s = sig_r, sig_s
+			    eff_R                = R_hbr
 
             st.write(f"🎲 Running Monte Carlo  (N = {mc_N:,}) …")
             t_mc_start = time.perf_counter()
