@@ -293,7 +293,6 @@ def quantum_iqae(mu_r, mu_s, sig_r, sig_s, R, epsilon, alpha, q_dim):
     G    = 2 ** q_dim
     n_q  = q_dim * 2
     span = 4.0 * max(sig_r, sig_s)
-
 	r_v  = np.linspace(mu_r - span, mu_r + span, G)
 	s_v  = np.linspace(mu_s - span, mu_s + span, G)
     R_g, S_g = np.meshgrid(r_v, s_v, indexing='ij')
