@@ -1400,15 +1400,15 @@ with tabs[5]:
         st.plotly_chart(fig_risk, use_container_width=True, theme=None)
 
     with col_cons:
-        st.markdown("**Operational Directive (NOT ACTUAL)**")
+        st.markdown("**Operational Directive**")
         st.info(action_advice)
         
         st.markdown("**Maneuver Feasibility**")
         delta_v_needed = 0.5 # Example km/s
         fuel_remaining = 85 # Example percentage
         
-        st.write(f"Estimated ΔV Required: `{delta_v_needed} m/s`")
-        st.progress(fuel_remaining / 100, text=f"On-board Propellant: {fuel_remaining}%")
+        st.write(f"Example: Estimated ΔV Required: `{delta_v_needed} m/s`")
+        st.progress(fuel_remaining / 100, text=f"Example: On-board Propellant: {fuel_remaining}%")
         
         if pc_final > THRESHOLD_MANEUVER:
             st.warning("⚠️ Warning: Maneuver will reduce mission life by approx. 4 months.")
