@@ -952,21 +952,23 @@ with tabs[2]:
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — SCALING & COMPLEXITY (The Math Engine masterclass)
 # ══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 3 — SCALING & COMPLEXITY (The Math Engine masterclass)
+# ══════════════════════════════════════════════════════════════════════════════
 with tabs[3]:
     st.markdown("### 📈 Scaling & Computational Complexity Analysis")
     st.write("This section breaks down the specific algorithmic cost. It bridges theoretical complexity (Big O) with the actual resources used in this specific simulation run.")
 
-   # ------------------------------------------------------------------
-    # ROW 1: DYNAMIC SCALING GAUGE METRICS (Anchored to actual run)
     # ------------------------------------------------------------------
-    # We create the 'Effective Constants' (c0 and q0) so the asymptotic 
-    # math perfectly intersects your specific simulation data points.
+    # ROW 1: DYNAMIC SCALING GAUGE METRICS
+    # ------------------------------------------------------------------
     eps_used = R["epsilon"]
-    queries  = max(R["qres"]["queries"], 1)
-    # R["mc_equiv"] uses the precise variance from the current covariance sliders!
+    # Safely extract queries (works whether qres is standalone or inside R)
+    queries = qres["queries"] if "queries" in qres else R["qres"]["queries"]
+    queries = max(queries, 1)
+    
     mc_equiv = R["mc_equiv"] 
 
-    # We scale the gauges dynamically based on current required precision.
     max_c_gauge = 10**(np.ceil(np.log10(mc_equiv) + 0.5))
     max_q_gauge = 10**(np.ceil(np.log10(queries) + 0.5))
 
@@ -979,15 +981,15 @@ with tabs[3]:
             value = mc_equiv,
             number = {'font': {'color': CAMB, 'size':35}},
             gauge = {
-                # FIX: Removed 'type': 'log' which causes ValueError in Plotly Indicators
                 'axis': {'range': [0, max_c_gauge], 'tickfont': {'color': CMUT}},
                 'bar': {'color': CAMB},
                 'bgcolor': PANEL, 'borderwidth': 2, 'bordercolor': BDR,
                 'threshold': {'line': {'color': CRED, 'width': 4}, 'thickness': 0.75, 'value': mc_equiv}
             },
-            title = {'text': f"Equivalent Classical N<br>(O(1/ε²)) at ε={eps_used}", 'font': {'color': CMUT, 'size': 12}}
+            title = {'text': f"Equivalent Classical N<br>(O(1/ε²)) at ε={eps_used}", 'font': {'color': CMUT, 'size': 13}}
         ))
-        fig_gauge_c.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=240, margin=dict(l=30, r=30, t=10, b=10))
+        # FIX: Increased height to 300 and top margin (t) to 70 to stop text clipping
+        fig_gauge_c.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=300, margin=dict(l=20, r=20, t=70, b=20))
         st.plotly_chart(fig_gauge_c, use_container_width=True, theme=None)
 
     with c2:
@@ -997,15 +999,14 @@ with tabs[3]:
             value = queries,
             number = {'font': {'color': CQNT, 'size':35}},
             gauge = {
-                # FIX: Removed 'type': 'log'
                 'axis': {'range': [0, max_q_gauge], 'tickfont': {'color': CMUT}},
                 'bar': {'color': CQNT},
                 'bgcolor': PANEL, 'borderwidth': 2, 'bordercolor': BDR,
                 'threshold': {'line': {'color': CRED, 'width': 4}, 'thickness': 0.75, 'value': queries}
             },
-            title = {'text': f"Quantum IQAE Queries M<br>(O(1/ε)) at ε={eps_used}", 'font': {'color': CMUT, 'size': 12}}
+            title = {'text': f"Quantum IQAE Queries M<br>(O(1/ε)) at ε={eps_used}", 'font': {'color': CMUT, 'size': 13}}
         ))
-        fig_gauge_q.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=240, margin=dict(l=30, r=30, t=10, b=10))
+        fig_gauge_q.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=300, margin=dict(l=20, r=20, t=70, b=20))
         st.plotly_chart(fig_gauge_q, use_container_width=True, theme=None)
 
     with c3:
@@ -1017,46 +1018,41 @@ with tabs[3]:
             value = speedup,
             number = {'suffix': "×", 'font': {'color': CGRN, 'size':35}},
             gauge = {
-                # FIX: Removed 'type': 'log'
                 'axis': {'range': [0, max_s_gauge], 'tickfont': {'color': CMUT}},
                 'bar': {'color': CGRN},
                 'bgcolor': PANEL, 'borderwidth': 2, 'bordercolor': BDR,
                 'threshold': {'line': {'color': CRED, 'width': 4}, 'thickness': 0.75, 'value': speedup}
             },
-            title = {'text': f"Calculated Speedup Ratio<br>(N_{{equiv}} / M)", 'font': {'color': CMUT, 'size': 12}}
+            title = {'text': f"Calculated Speedup Ratio<br>(N_{{equiv}} / M)", 'font': {'color': CMUT, 'size': 13}}
         ))
-        fig_gauge_s.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=240, margin=dict(l=30, r=30, t=10, b=10))
+        fig_gauge_s.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=300, margin=dict(l=20, r=20, t=70, b=20))
         st.plotly_chart(fig_gauge_s, use_container_width=True, theme=None)
+
+    st.divider()
 
     # ------------------------------------------------------------------
     # ROW 2: SIDE-BY-SIDE RESOURCE vs PRECISION TRADEOFF
     # ------------------------------------------------------------------
     col_scaling, col_conv = st.columns([1, 1.2])
     
-    # Mathematical anchor points for the curves
     c_factor = mc_equiv * (eps_used**2)
     q_factor = queries * eps_used
     
-    # Generate asymptotic scaling data (from current precision to extreme 10^-5)
     eps_arr = np.logspace(np.log10(min(eps_used*10, 0.1)), np.log10(max(eps_used/100, 1e-5)), 300)
-    N_c = c_factor / (eps_arr**2)  # Classical O(1/ε²)
-    M_q = q_factor / eps_arr       # Quantum O(1/ε)
+    N_c = c_factor / (eps_arr**2) 
+    M_q = q_factor / eps_arr       
 
-    # LEFT COLUMN: THEORETICAL COST TRADEOFF (LOG-LOG)
     with col_scaling:
         st.markdown("#### ⚖️ Complexity vs. Target Precision (ε)")
         st.write("Visualization of algorithmic 'Big O' costs. Quantum scaling (blue) scales linearly, while Classical (orange) is a parabolic penalty as precision increases.")
         fig_scale = go.Figure()
         
-        # Theoretical Curves
         fig_scale.add_trace(go.Scatter(x=eps_arr, y=N_c, mode='lines', name='Classical O(ε⁻²)', line=dict(color=CAMB, width=2.5)))
         fig_scale.add_trace(go.Scatter(x=eps_arr, y=M_q, mode='lines', name='Quantum O(ε⁻¹)', line=dict(color=CQNT, width=2.5)))
         
-        # Dynamic marker for current run data point
         fig_scale.add_trace(go.Scatter(x=[eps_used], y=[mc_equiv], mode='markers', marker=dict(size=12, color=CAMB, symbol='circle'), name='Current Run MC-Eq'))
         fig_scale.add_trace(go.Scatter(x=[eps_used], y=[queries], mode='markers', marker=dict(size=14, color=CQNT, symbol='star'), name='Current Run IQAE-M'))
 
-        # Standard vertical reference for current Target ε
         fig_scale.add_vline(x=eps_used, line=dict(color=CTXT, width=1, dash='dot'), annotation=dict(text=f"Current ε", font=dict(color=CTXT, size=10)))
 
         fig_scale.update_layout(
@@ -1064,43 +1060,35 @@ with tabs[3]:
             yaxis=dict(type='log', title='Computational Resources (N or M)', showgrid=True, gridcolor=BDR, color=CMUT, title_standoff=15),
             plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
             legend=dict(bgcolor=CARD, bordercolor=BDR, x=0.05, y=0.05, font=dict(size=10)),
-            height=460, margin=dict(l=70, r=20, t=10, b=70), # Fixed overlapping labels
+            height=460, margin=dict(l=70, r=20, t=10, b=70), 
         )
         st.plotly_chart(fig_scale, use_container_width=True, theme=None)
 
-    # ------------------------------------------------------------------
-    # RIGHT COLUMN: CONVERGENCE RATES AND SIMULATION FEASIBILITY
-    # ------------------------------------------------------------------
     with col_conv:
         st.markdown("#### Error Convergence & Simulated Feasibility")
         st.write("This plot visualizes Error vs. Resources. The 'O(1/M)' Quantum curve approaches absolute zero significantly faster than the Classical 'O(1/√N)' curve.")
         
-        # Mathematically anchor the convergence constants
         c0 = eps_used * np.sqrt(mc_equiv)
         q0 = eps_used * queries
 
-        # Define an extended effort sweep range
         N_ext = np.logspace(np.log10(max(mc_equiv/100, 10)), np.log10(mc_equiv*100), 200)
         M_ext = np.logspace(np.log10(max(queries/10, 2)), np.log10(queries*100), 200)
         
-        # Classical ε ∝ N⁻¹/²
         fig_conv = go.Figure()
         fig_conv.add_trace(go.Scatter(x=N_ext, y=c0 / np.sqrt(N_ext), mode='lines', name='Classical ε ∝ N⁻¹/²', line=dict(color=CAMB, width=2)))
-        # Quantum ε ∝ M⁻¹
         fig_conv.add_trace(go.Scatter(x=M_ext, y=q0 / M_ext, mode='lines', name='Quantum ε ∝ M⁻¹', line=dict(color=CQNT, width=2.5)))
 
-        # Actual data point anchors
         fig_conv.add_trace(go.Scatter(x=[mc_equiv], y=[eps_used], mode='markers', name='MC Equivalent Point', marker=dict(size=10, color=CAMB, symbol='circle')))
         fig_conv.add_trace(go.Scatter(x=[queries], y=[eps_used], mode='markers', name='IQAE Queries Point', marker=dict(size=12, color=CQNT, symbol='star')))
 
-        # --- Dynamic Feasibility Horizon (Reality Check Overlay) ---
-        # Modeling where simulated circuit depth becomes physically problematic
-        G_bits = max(R["qiskit_grid_bits"], 3)
-        # Empirical guess: Complexity increases exponentially with marked states (Collision Prob)
+        # --- FIX: Derive Qubits dynamically from the grid size ---
+        grid_size = qres["grid"] if "grid" in qres else 16 # Fallback to 16 if missing
+        G_bits = max(int(np.log2(grid_size)), 3)
+        
         pc_factor = max(R["pc_mc"] * 1e4, 0.5) 
         feasible_query_limit = int((2**(G_bits * 1.8)) / pc_factor)
         feasible_query_limit = max(feasible_query_limit, queries * 1.5)
-        feasible_query_limit = min(feasible_query_limit, queries * 100) # Cap it
+        feasible_query_limit = min(feasible_query_limit, queries * 100) 
 
         max_resources = max(N_ext.max(), M_ext.max())
         
@@ -1110,7 +1098,6 @@ with tabs[3]:
             annotation=dict(text="Complexity Wall: Simulation may not converge", font=dict(color=CRED, size=11, family='monospace'), textangle=-90, yanchor='top', y=0.95),
             name="Simulated Feasibility Horizon"
         )
-        # Marker on the feasibility horizon line
         fig_conv.add_vline(x=feasible_query_limit, line=dict(color=CRED, width=2, dash='dash'), showlegend=False)
 
         fig_conv.update_layout(
@@ -1118,7 +1105,7 @@ with tabs[3]:
             yaxis=dict(type='log', title='Target Error Margin (ε)', showgrid=True, gridcolor=BDR, color=CMUT, title_standoff=15),
             plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
             legend=dict(bgcolor=CARD, bordercolor=BDR, x=0.05, y=0.05, font=dict(size=10)),
-            height=460, margin=dict(l=70, r=20, t=10, b=70), # Fixed margins
+            height=460, margin=dict(l=70, r=20, t=10, b=70), 
         )
         st.plotly_chart(fig_conv, use_container_width=True, theme=None)
 
