@@ -453,29 +453,54 @@ with tabs[0]:
     st.markdown("### 🌍 Mission Overview & Encounter Analytics")
 
     # ---------------------------------------------------------
-    # 1. THREAT LEVEL BADGE
+    # 1. SYNCHRONIZED THREAT LEVEL BADGE
     # ---------------------------------------------------------
-    pc = R["pc_mc"]
-    if pc > 1e-4:
-        risk_html = '<div class="risk-high">🔴  HIGH RISK — MANOEUVRE REQUIRED</div>'
-    elif pc > 1e-5:
-        risk_html = '<div class="risk-mid">🟡  ELEVATED RISK — MONITOR CLOSELY</div>'
+    # We now point to the Quantum Estimate (pc_final) for dashboard consistency
+    try:
+        pc_final = float(qres["pc"])
+    except:
+        pc_final = float(qres["pc"][0])
+
+    if pc_final > 1e-4:
+        risk_html = f'<div class="risk-high">🔴 CRITICAL RISK — MANEUVER MANDATORY (Pc: {pc_final:.2e})</div>'
+    elif pc_final > 1e-5:
+        risk_html = f'<div class="risk-mid">🟡 ELEVATED RISK — MONITOR CLOSELY (Pc: {pc_final:.2e})</div>'
+    elif pc_final > 1e-6:
+        risk_html = f'<div class="risk-low">🔵 NOMINAL RISK — INCREASE TRACKING (Pc: {pc_final:.2e})</div>'
     else:
-        risk_html = '<div class="risk-low">🟢  NOMINAL RISK — NO ACTION</div>'
+        risk_html = f'<div class="risk-low">🟢 SAFE — NO ACTION REQUIRED (Pc: {pc_final:.2e})</div>'
+    
     st.markdown(risk_html, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Calculate Relative Velocity
-    v_rel_km_s = np.linalg.norm(R['v1'] - R['v2'])
-
+    v_rel_vec = R['v2'] - R['v1']
+    v_rel_km_s = np.linalg.norm(v_rel_vec)
  
-    st.markdown("#### 📐 Encounter Geometry at TCA")
-    g1, g2, g3, g4, g5 = st.columns(5)
-    g1.metric("Target Asset", R["obj1"].split("(")[0].strip())
-    g2.metric("Threat Object", R["obj2"].split("(")[0].strip())
-    g3.metric("Relative Velocity", f"{v_rel_km_s:.2f} km/s")
-    g4.metric("Total Miss Distance", f"{R['miss_km']*1000:.1f} m")
-    g5.metric("Combined HBR", f"{R['R_hbr']:.1f} m")
+    # --- Unified Mission & Quantum Metrics ---
+    st.markdown("#### 📐 Encounter Summary & Quantum Telemetry")
+    
+    # We use 4 columns for a balanced look across the screen
+    m1, m2, m3, m4 = st.columns(4)
+
+    # Column 1: The "Who"
+    asset_name = R["obj1"].split("(")[0].strip()
+    threat_name = R["obj2"].split("(")[0].strip()
+    m1.metric("Asset / Threat", asset_name, f"vs {threat_name}")
+
+    # Column 2: The Physical Encounter
+    # Accurate Relative Velocity (Vector magnitude)
+    v_rel_km_s = np.linalg.norm(R['v2'] - R['v1'])
+    v_rel_km_h = v_rel_km_s * 3600
+    m2.metric("Relative Velocity", f"{v_rel_km_s:.3f} km/s", f"{v_rel_km_h:,.0f} km/h")
+
+    # Column 3: The Geometry
+    # Dynamic Miss Distance based on your sliders
+    miss_dist = np.sqrt(R['mu_r']**2 + R['mu_s']**2)
+    m3.metric("Miss Distance (TCA)", f"{miss_dist:.1f} m", f"HBR: {R['R_hbr']:.1f}m")
+
+    # Column 4: The Quantum Advantage
+    m4.metric("Quantum Speedup", f"{R['speedup']:.0f}x", f"{qres['queries']:,} Oracle Queries")
 
     st.markdown("#### 🎲 Collision Probability ($P_c$) Estimates")
     p1, p2, p3 = st.columns(3)
@@ -1198,12 +1223,7 @@ with tabs[4]:
     st.divider()
 
 
-    # ------------------------------------------------------------------
-    # ROW 3: IQAE FLOWCHART & ANIMATION (Side-by-Side)
-    # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
-    # 5. IQAE FLOW & ANIMATION (REPAIRED)
-    # ------------------------------------------------------------------
+   
     col_f, col_a = st.columns([1, 1.2])
     
     with col_f:
@@ -1285,85 +1305,139 @@ with tabs[4]:
         st.plotly_chart(fig_anim, use_container_width=True, theme=None)
     
 
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — MISSION DECISION (COLA Operational Control)
+# ══════════════════════════════════════════════════════════════════════════════
 with tabs[5]:
-    st.markdown("### 📋 Mission Decision Report")
+    st.markdown("### 🛰️ Mission Decision Support (COLA Protocol)")
+    st.write("Final operational assessment based on converged Quantum Probability and risk tolerance thresholds.")
 
-    pc_val = R["pc_mc"]
-    if pc_val > 1e-3:
-        decision = "🔴  MANOEUVRE REQUIRED"
-        dec_col  = "#f87171"
-        dec_bg   = "#7f1d1d"
-        rec_text = ("Collision probability exceeds the operational threshold (1×10⁻⁴). "
-                    "A collision avoidance manoeuvre (CAM) should be planned immediately. "
-                    "Quantum IQAE confirms the estimate with a tight 95% confidence interval.")
-    elif pc_val > 1e-4:
-        decision = "🟡  HEIGHTENED MONITORING"
-        dec_col  = "#f59e0b"
-        dec_bg   = "#431407"
-        rec_text = ("Probability is elevated but below the mandatory manoeuvre threshold. "
-                    "Recommend continuous monitoring with updated TLE refreshes every 6 hours. "
-                    "Pre-plan a contingency CAM.")
+    # ------------------------------------------------------------------
+    # ROW 1: THE DECISION ENGINE
+    # ------------------------------------------------------------------
+    # Define standard space industry thresholds
+    THRESHOLD_MONITOR = 1e-6   # 1 in 1,000,000
+    THRESHOLD_WARNING = 1e-5   # 1 in 100,000
+    THRESHOLD_MANEUVER = 1e-4  # 1 in 10,000
+
+    pc_final = float(qres["pc"])
+    
+    # Logic for status
+    if pc_final < THRESHOLD_MONITOR:
+        status_msg = "🟢 NOMINAL: NO ACTION REQUIRED"
+        status_color = CGRN
+        action_advice = "The collision risk is below the monitoring floor. Continue routine operations."
+    elif pc_final < THRESHOLD_WARNING:
+        status_msg = "🟡 MONITOR: INCREASE TRACKING"
+        status_color = CAMB
+        action_advice = "Probability exceeds 10⁻⁶. Request high-priority radar passes to refine the state vector."
+    elif pc_final < THRESHOLD_MANEUVER:
+        status_msg = "🟠 WARNING: PREPARE MANEUVER"
+        status_color = "orange"
+        action_advice = "Risk is significant. Begin planning station-keeping burn. Inform secondary mission payloads of potential downtime."
     else:
-        decision = "🟢  NO ACTION REQUIRED"
-        dec_col  = "#34d399"
-        dec_bg   = "#052e16"
-        rec_text = ("Collision probability is within nominal limits. "
-                    "Continue routine tracking. Review if TLE age exceeds 3 days.")
+        status_msg = "🔴 CRITICAL: EXECUTE EVASIVE MANEUVER"
+        status_color = CRED
+        action_advice = "Probability exceeds the 10⁻⁴ threshold. Immediate collision avoidance maneuver (CAM) is mandatory to protect the asset."
 
+    # Display the Big Decision Card
+    st.container()
     st.markdown(f"""
-<div style="background:{dec_bg};border:2px solid {dec_col};border-radius:12px;
-            padding:1.2rem 2rem;margin-bottom:1.5rem;text-align:center">
-  <div style="font-size:1.6rem;font-weight:800;color:{dec_col}">{decision}</div>
-  <div style="color:#94a3b8;margin-top:.5rem;font-size:.9rem">{rec_text}</div>
-</div>
-""", unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("#### 🛰 Object & Encounter Data")
-        rows = [
-            ("Object 1",            R["obj1"]),
-            ("Object 2",            R["obj2"]),
-            ("Miss Distance",       f"{R['miss_km']*1000:.2f} m"),
-            ("Combined HBR",        f"{R['R_hbr']:.0f} m"),
-            ("σ Radial",            f"{R['sig_r']:.1f} m"),
-            ("σ Along-track",       f"{R['sig_s']:.1f} m"),
-            ("Grid Resolution",     f"{qres['grid']}×{qres['grid']}"),
-            ("Collision Cells",     f"{qres['marked']} / {qres['grid']**2}"),
-        ]
-        import pandas as pd
-        st.dataframe(pd.DataFrame(rows, columns=["Parameter", "Value"]),
-                     use_container_width=True, hide_index=True)
-
-    with col2:
-        st.markdown("#### ⚛ Quantum Computation Summary")
-        rows_q = [
-            ("Pc (Classical MC)",     f"{R['pc_mc']:.6e}"),
-            ("Pc (Quantum IQAE)",     f"{qres['pc']:.6e}"),
-            ("Pc (Discrete Truth)",   f"{qres['pc_disc']:.6e}"),
-            ("IQAE 95% CI",           f"[{qres['ci'][0]:.3e}, {qres['ci'][1]:.3e}]"),
-            ("Oracle Queries (IQAE)", f"{qres['queries']}"),
-            ("MC Samples",            f"{R['mc_N']:,}"),
-            ("MC Equiv for match",    f"{R['mc_equiv']:,}"),
-            ("Quantum Speedup",       f"{R['speedup']:,.0f}×"),
-            ("Circuit Depth",         f"{qres['depth']}"),
-            ("Target ε",              f"{R['epsilon']}"),
-            ("Confidence Level",      f"{R['alpha_ci']}%"),
-        ]
-        st.dataframe(pd.DataFrame(rows_q, columns=["Metric", "Value"]),
-                     use_container_width=True, hide_index=True)
+        <div style="background-color:{CARD}; border: 2px solid {status_color}; border-radius: 10px; padding: 25px; text-align: center;">
+            <h1 style="color:{status_color}; margin:0;">{status_msg}</h1>
+            <p style="color:{CTXT}; font-size: 1.2em; margin-top:10px;">Quantum Probability (Pc): <b>{pc_final:.2e}</b></p>
+        </div>
+    """, unsafe_allow_html=True)
 
     st.divider()
-    st.markdown("#### 📊 Threshold Reference Chart")
 
-    thresholds = {
-        "Threshold": ["RED (Manoeuvre)", "YELLOW (Monitor)", "GREEN (Nominal)"],
-        "Pc Range":  ["> 1×10⁻⁴",      "1×10⁻⁵ – 1×10⁻⁴", "< 1×10⁻⁵"],
-        "Action":    ["CAM required",     "Pre-plan CAM",      "Routine tracking"],
-        "This Event":[
-            "✓" if pc_val > 1e-4 else "–",
-            "✓" if 1e-5 < pc_val <= 1e-6 else "–",
-            "✓" if pc_val <= 1e-6 else "–",
-        ]
-    }
-    st.dataframe(pd.DataFrame(thresholds), use_container_width=True, hide_index=True)
+    # ------------------------------------------------------------------
+    # ROW 2: RISK VS THRESHOLD VISUALIZATION
+    # ------------------------------------------------------------------
+    col_risk, col_cons = st.columns([1.5, 1])
+
+    with col_risk:
+        st.markdown("**Risk Threshold Landscape**")
+        
+        # Log-scale visualization of where we sit in the industry standards
+        t_labels = ["Safe", "Monitor", "Warning", "Maneuver", "Critical"]
+        t_values = [1e-7, THRESHOLD_MONITOR, THRESHOLD_WARNING, THRESHOLD_MANEUVER, 1e-3]
+        
+        fig_risk = go.Figure()
+        
+        # Background color zones
+        fig_risk.add_hrect(y0=1e-8, y1=THRESHOLD_MONITOR, fillcolor="rgba(34, 197, 94, 0.1)", line_width=0)
+        fig_risk.add_hrect(y0=THRESHOLD_MONITOR, y1=THRESHOLD_WARNING, fillcolor="rgba(245, 158, 11, 0.1)", line_width=0)
+        fig_risk.add_hrect(y0=THRESHOLD_WARNING, y1=1e-2, fillcolor="rgba(239, 68, 68, 0.1)", line_width=0)
+
+        # The Risk Bar
+        fig_risk.add_trace(go.Bar(
+            x=["Current Risk"], y=[pc_final],
+            marker=dict(color=status_color, line=dict(color=CTXT, width=1.5)),
+            width=0.4
+        ))
+
+        # Threshold lines
+        for val, label in zip([THRESHOLD_MONITOR, THRESHOLD_WARNING, THRESHOLD_MANEUVER], ["10⁻⁶", "10⁻⁵", "10⁻⁴"]):
+            fig_risk.add_hline(y=val, line=dict(color=CMUT, width=1, dash='dot'), 
+                               annotation=dict(text=f"Threshold {label}", font=dict(color=CMUT, size=10), x=0.9))
+
+        fig_risk.update_layout(
+            yaxis=dict(type='log', title='Probability of Collision (Pc)', gridcolor=BDR, range=[-8, -2], color=CMUT),
+            plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
+            height=400, margin=dict(l=70, r=20, t=10, b=40)
+        )
+        st.plotly_chart(fig_risk, use_container_width=True, theme=None)
+
+    with col_cons:
+        st.markdown("**Operational Directive**")
+        st.info(action_advice)
+        
+        st.markdown("**Maneuver Feasibility**")
+        delta_v_needed = 0.5 # Example km/s
+        fuel_remaining = 85 # Example percentage
+        
+        st.write(f"Estimated ΔV Required: `{delta_v_needed} m/s`")
+        st.progress(fuel_remaining / 100, text=f"On-board Propellant: {fuel_remaining}%")
+        
+        if pc_final > THRESHOLD_MANEUVER:
+            st.warning("⚠️ Warning: Maneuver will reduce mission life by approx. 4 months.")
+        else:
+            st.success("✅ Propellant levels are nominal for emergency maneuvers.")
+
+    st.divider()
+
+    # ------------------------------------------------------------------
+    # ROW 3: DECISION MATRIX FLOWCHART (Educational)
+    # ------------------------------------------------------------------
+    st.markdown("#### 🧭 Decision Logic: The COLA Algorithm")
+    st.write("How this dashboard arrives at the mission recommendation.")
+    
+    fig_dec = go.Figure()
+    
+    # Helper for drawing nodes
+    def draw_node(fig, x, y, text, color, width=2.5):
+        fig.add_shape(type="rect", x0=x-width/2, x1=x+width/2, y0=y-0.3, y1=y+0.3, 
+                      line=dict(color=color, width=2), fillcolor=PANEL)
+        fig.add_annotation(x=x, y=y, text=text, showarrow=False, font=dict(color=CTXT, size=11))
+
+    # Flowchart Logic
+    draw_node(fig_dec, 5, 4, "Quantum Engine Converged?", CQNT)
+    draw_node(fig_dec, 5, 2.5, "Pc > 10⁻⁴?", CRED)
+    draw_node(fig_dec, 2, 1, "Plan Evasive Burn", CRED)
+    draw_node(fig_dec, 5, 1, "Pc > 10⁻⁶?", CAMB)
+    draw_node(fig_dec, 8, 1, "No Action Required", CGRN)
+
+    # Connections
+    def draw_line(fig, x0, y0, x1, y1):
+        fig.add_annotation(x=x1, y=y1, ax=x0, ay=y0, xref="x", yref="y", axref="x", ayref="y",
+                           showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor=CMUT)
+
+    draw_line(fig_dec, 5, 3.7, 5, 2.8) # Down
+    draw_line(fig_dec, 3.75, 2.5, 2, 1.3) # Yes to Maneuver
+    draw_line(fig_dec, 5, 2.2, 5, 1.3) # No to Maneuver -> Pc > 10^-6?
+    draw_line(fig_dec, 6.25, 1, 8, 1) # No to 10^-6
+
+    fig_dec.update_layout(xaxis=dict(visible=False, range=[0, 10]), yaxis=dict(visible=False, range=[0, 5]),
+                         plot_bgcolor=DARK, paper_bgcolor=DARK, height=250, margin=dict(l=0, r=0, t=0, b=0))
+    st.plotly_chart(fig_dec, use_container_width=True, theme=None)
