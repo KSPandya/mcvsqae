@@ -468,9 +468,7 @@ with tabs[0]:
     # Calculate Relative Velocity
     v_rel_km_s = np.linalg.norm(R['v1'] - R['v2'])
 
-    # ---------------------------------------------------------
-    # 2. ENCOUNTER GEOMETRY (The Physics)
-    # ---------------------------------------------------------
+ 
     st.markdown("#### 📐 Encounter Geometry at TCA")
     g1, g2, g3, g4, g5 = st.columns(5)
     g1.metric("Target Asset", R["obj1"].split("(")[0].strip())
@@ -479,9 +477,6 @@ with tabs[0]:
     g4.metric("Total Miss Distance", f"{R['miss_km']*1000:.1f} m")
     g5.metric("Combined HBR", f"{R['R_hbr']:.1f} m")
 
-    # ---------------------------------------------------------
-    # 3. PROBABILITY METRICS (The Math)
-    # ---------------------------------------------------------
     st.markdown("#### 🎲 Collision Probability ($P_c$) Estimates")
     p1, p2, p3 = st.columns(3)
     
@@ -509,9 +504,6 @@ with tabs[0]:
     
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ---------------------------------------------------------
-    # 4. QUANTUM ADVANTAGE & COMPARISON
-    # ---------------------------------------------------------
     col_l, col_r = st.columns(2)
 
     with col_l:
@@ -543,39 +535,7 @@ with tabs[0]:
 </div>
 """, unsafe_allow_html=True)
 
-    # ---------------------------------------------------------
-    # 5. EXPANDABLE MATH & HELPER FUNCTIONS
-    # ---------------------------------------------------------
-    st.divider()
-    with st.expander("📚 View Calculation Methodology & Helper Equations"):
-        st.markdown("#### 1. Classical 2D Probability of Collision ($P_c$)")
-        st.write("The classical probability is calculated by integrating the 2D Gaussian probability density function (PDF) over the circular cross-section of the combined Hard-Body Radius ($R_{HBR}$) in the Encounter Plane.")
-        st.latex(r"""
-        P_c = \iint_{x^2 + y^2 \leq R_{HBR}^2} \frac{1}{2\pi\sigma_x\sigma_y} \exp\left[ -\frac{1}{2} \left( \frac{(x-\mu_x)^2}{\sigma_x^2} + \frac{(y-\mu_y)^2}{\sigma_y^2} \right) \right] dx dy
-        """)
-        
-        st.markdown("#### 2. Quantum State Preparation ($\ket{\psi}$)")
-        st.write("To evaluate this on a quantum computer, the continuous Encounter Plane is discretized into a finite $G \times G$ grid using $q$ qubits per axis. The probabilities are loaded into the amplitudes of the quantum state.")
-        st.latex(r"""
-        \ket{\psi}_{n} = \sum_{i=0}^{G-1} \sum_{j=0}^{G-1} \sqrt{p(x_i, y_j)} \ket{i}_x \ket{j}_y \ket{0}_{obj}
-        """)
-        
-        st.markdown("#### 3. The Collision Oracle ($U_\omega$)")
-        st.write("A quantum oracle flags the states where the Euclidean distance to the origin is less than the Hard-Body Radius by flipping an objective qubit $\ket{obj}$.")
-        st.latex(r"""
-        U_\omega \ket{i,j}\ket{0} = 
-        \begin{cases} 
-        \ket{i,j}\ket{1} & \text{if } \sqrt{x_i^2 + y_j^2} \leq R_{HBR} \\
-        \ket{i,j}\ket{0} & \text{otherwise}
-        \end{cases}
-        """)
-
-        st.markdown("#### 4. Speedup Formulation (Variance Matching)")
-        st.write("The classical sample requirement ($N$) is dynamically calculated by matching the variance of a classical binomial distribution to the exact Confidence Interval bound achieved by the Quantum IQAE algorithm.")
-        st.latex(r"""
-        N_{equiv} = \left\lceil \frac{Z^2 \cdot P_c(1 - P_c)}{\varepsilon_{IQAE}^2} \right\rceil \quad \longrightarrow \quad \text{Speedup} = \frac{N_{equiv}}{M_{queries}}
-        """)
-
+    
 
 with tabs[1]:
     st.markdown("### 📡 SGP4 Orbital Propagation")
