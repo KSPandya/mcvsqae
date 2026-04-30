@@ -949,12 +949,7 @@ with tabs[2]:
     st.plotly_chart(fig_dist, use_container_width=True, theme=None)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — SCALING & COMPLEXITY (The Math Engine masterclass)
-# ══════════════════════════════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — SCALING & COMPLEXITY (The Math Engine masterclass)
-# ══════════════════════════════════════════════════════════════════════════════
+
 with tabs[3]:
     st.markdown("### 📈 Scaling & Computational Complexity Analysis")
     st.write("This section breaks down the specific algorithmic cost. It bridges theoretical complexity (Big O) with the actual resources used in this specific simulation run.")
@@ -1112,94 +1107,145 @@ with tabs[3]:
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — CIRCUIT DIAGNOSTICS & IQAE ANIMATION
 # ══════════════════════════════════════════════════════════════════════════════
-with tabs[4]: # Adjust index if your diagnostics tab is not tabs[4]
-    st.markdown("### 🔬 Quantum Hardware Diagnostics & IQAE Telemetry")
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 4 — CIRCUIT DIAGNOSTICS & IQAE TELEMETRY
+# ══════════════════════════════════════════════════════════════════════════════
+with tabs[4]: 
+    st.markdown("### 🔬 Quantum Hardware Diagnostics & Algorithmic Flow")
     st.write("Deep dive into the transpiled circuit architecture and the Iterative Quantum Amplitude Estimation (IQAE) convergence loop.")
 
     # ------------------------------------------------------------------
-    # ROW 1: HARDWARE TELEMETRY CARDS
+    # ROW 1: HARDWARE TELEMETRY METRICS
     # ------------------------------------------------------------------
     grid_size = qres.get("grid", 16)
-    state_qubits = max(int(np.log2(grid_size)) * 3, 3) # 3D grid assumption
+    state_qubits = max(int(np.log2(grid_size)) * 3, 3) 
     total_qubits = state_qubits + 1 # +1 for the Objective/Flag Ancilla
 
-    # Rough empirical estimates for an SGP4 probability oracle
     est_depth = total_qubits * 145 
     est_cnots = total_qubits * 65
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Required Qubits", f"{total_qubits}", "Logical")
-    c2.metric("Circuit Depth (Est.)", f"{est_depth:,}", "Gates")
-    c3.metric("Entanglement Cost", f"{est_cnots:,}", "CNOTs")
-    c4.metric("Oracle Calls (M)", f"{qres['queries']}", "Total")
+    c1.metric("Logical Qubits", f"{total_qubits}")
+    c2.metric("Circuit Depth (Est.)", f"{est_depth:,}")
+    c3.metric("Entanglement (CNOTs)", f"{est_cnots:,}")
+    c4.metric("Total Oracle Calls (M)", f"{qres['queries']}")
 
     st.divider()
 
     # ------------------------------------------------------------------
-    # ROW 2: CIRCUIT DIAGRAM & IQAE ANIMATION
+    # ROW 2: FULL-WIDTH CIRCUIT DIAGRAM
     # ------------------------------------------------------------------
-    col_circ, col_iqae = st.columns([1, 1])
+    st.markdown("#### 🖧 Logical Circuit Architecture (Full Pipeline)")
+    st.write("High-level schematic of the State Preparation ($\mathcal{A}$) and sequential Grover Operators ($\mathcal{Q}$).")
+    
+    fig_circ = go.Figure()
 
-    # --- LEFT: CUSTOM PLOTLY QUANTUM CIRCUIT RENDERER ---
-    with col_circ:
-        st.markdown("#### 🖧 Logical Circuit Architecture")
-        st.write("High-level schematic of the State Preparation ($\mathcal{A}$) and Grover Operator ($\mathcal{Q}$) sequence.")
+    # Wire definitions (Y-coordinates)
+    wires = {"State Register |ψ⟩": 2, "Ancilla |0⟩": 0.5}
+    
+    # Draw Wires across the full width
+    for name, y in wires.items():
+        fig_circ.add_trace(go.Scatter(x=[-0.5, 12], y=[y, y], mode='lines', line=dict(color=CMUT, width=2), hoverinfo='skip', showlegend=False))
+        fig_circ.add_annotation(x=-1.5, y=y, text=name, showarrow=False, font=dict(color=CTXT, size=14), xanchor="left")
+
+    # Helper to draw multi-qubit gates
+    def draw_gate(fig, x0, x1, y0, y1, text, color, font_size=16):
+        fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color=BDR, width=2), fillcolor=color)
+        fig.add_annotation(x=(x0+x1)/2, y=(y0+y1)/2, text=text, showarrow=False, font=dict(color=DARK, size=font_size, family="Arial Black"))
+
+    # 1. Hadamard Initialization
+    draw_gate(fig_circ, 0, 1, -0.5, 3, "H", CACC, 20)
+    
+    # 2. State Preparation A
+    draw_gate(fig_circ, 1.5, 3.5, -0.5, 3, "State Prep (𝒜)", CQNT)
+    
+    # 3. Grover Sequence (Q^k)
+    draw_gate(fig_circ, 4.5, 6, -0.5, 3, "Grover (𝒬)", CAMB)
+    draw_gate(fig_circ, 6.5, 8, -0.5, 3, "Grover (𝒬)", CAMB)
+    fig_circ.add_annotation(x=9, y=1.25, text=". . .", showarrow=False, font=dict(color=CMUT, size=40))
+    draw_gate(fig_circ, 10, 11.5, -0.5, 3, "Grover (𝒬)", CAMB)
+
+    # 4. Measurement
+    fig_circ.add_shape(type="rect", x0=11.7, x1=12.5, y0=0.1, y1=0.9, line=dict(color=BDR, width=2), fillcolor=CARD)
+    fig_circ.add_trace(go.Scatter(x=[11.9, 12.1, 12.3], y=[0.4, 0.7, 0.4], mode='lines', line=dict(color=CMUT, width=1.5), hoverinfo='skip', showlegend=False))
+    fig_circ.add_annotation(x=12.1, y=1.2, text="Measure", showarrow=False, font=dict(color=CMUT, size=12))
+
+    fig_circ.update_layout(
+        xaxis=dict(range=[-2, 13], showgrid=False, zeroline=False, visible=False),
+        yaxis=dict(range=[-1, 3.5], showgrid=False, zeroline=False, visible=False),
+        plot_bgcolor=PANEL, paper_bgcolor=DARK,
+        height=250, margin=dict(l=10, r=10, t=10, b=10)
+    )
+    st.plotly_chart(fig_circ, use_container_width=True, theme=None)
+
+    st.divider()
+
+    # ------------------------------------------------------------------
+    # ROW 3: IQAE FLOWCHART & ANIMATION (Side-by-Side)
+    # ------------------------------------------------------------------
+    col_flow, col_anim = st.columns([1, 1.2])
+
+    # --- LEFT: IQAE ALGORITHM FLOWCHART ---
+    with col_flow:
+        st.markdown("#### 🔄 Iterative QAE Flowchart")
+        st.write("The hybrid quantum-classical loop.")
         
-        fig_circ = go.Figure()
+        fig_flow = go.Figure()
 
-        # Define wire Y-coordinates
-        wires = {"q_x": 3, "q_y": 2, "q_z": 1, "Ancilla": 0}
+        # Helper to draw flowchart nodes
+        def draw_node(fig, x, y, text, color, width=3):
+            fig.add_shape(type="rect", x0=x-width/2, x1=x+width/2, y0=y-0.4, y1=y+0.4, 
+                          line=dict(color=color, width=2), fillcolor=PANEL)
+            fig.add_annotation(x=x, y=y, text=text, showarrow=False, font=dict(color=CTXT, size=12))
+
+        # Helper to draw arrows
+        def draw_arrow(fig, x0, y0, x1, y1):
+            fig.add_annotation(x=x1, y=y1, ax=x0, ay=y0, xref="x", yref="y", axref="x", ayref="y",
+                               showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=2, arrowcolor=CMUT)
+
+        # Draw Nodes
+        draw_node(fig_flow, 5, 5, "<b>1. Quantum Init:</b><br>Define max target error (ε)", CACC)
+        draw_node(fig_flow, 5, 3.5, "<b>2. Quantum Execution:</b><br>Run Circuit (𝒜 + 𝒬ᵏ)<br>Measure Ancilla", CQNT)
+        draw_node(fig_flow, 5, 2, "<b>3. Classical Update:</b><br>Adjust Confidence Interval<br>[θ_lower, θ_upper]", CAMB)
+        draw_node(fig_flow, 5, 0.5, "<b>4. Precision Check:</b><br>Is (θ_u - θ_l) < ε?", CRED)
+        draw_node(fig_flow, 2, 0.5, "<b>5. Return:</b><br>Final Probability (Pc)", CGRN, width=2.5)
+
+        # Draw Arrows
+        draw_arrow(fig_flow, 5, 4.6, 5, 3.9)
+        draw_arrow(fig_flow, 5, 3.1, 5, 2.4)
+        draw_arrow(fig_flow, 5, 1.6, 5, 0.9)
         
-        # Draw Wires
-        for name, y in wires.items():
-            fig_circ.add_trace(go.Scatter(x=[0, 10], y=[y, y], mode='lines', line=dict(color=CMUT, width=2), hoverinfo='skip', showlegend=False))
-            fig_circ.add_annotation(x=-0.5, y=y, text=f"|0⟩ {name}", showarrow=False, font=dict(color=CTXT, size=14))
+        # Loop back arrow (No -> Step 2)
+        fig_flow.add_trace(go.Scatter(x=[6.5, 7.5, 7.5, 6.5], y=[0.5, 0.5, 3.5, 3.5], mode='lines', line=dict(color=CMUT, width=2)))
+        fig_flow.add_annotation(x=6.5, y=3.5, ax=6.8, ay=3.5, showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=2, arrowcolor=CMUT)
+        fig_flow.add_annotation(x=7.5, y=2, text="No (Increase k)", showarrow=False, textangle=90, font=dict(color=CMUT, size=11), xshift=15)
 
-        # Helper to draw gates (Rectangles)
-        def draw_gate(fig, x0, x1, y0, y1, text, color):
-            fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color=BDR, width=2), fillcolor=color)
-            fig.add_annotation(x=(x0+x1)/2, y=(y0+y1)/2, text=text, showarrow=False, font=dict(color=DARK, size=16, family="Arial Black"))
+        # Exit arrow (Yes -> Step 5)
+        draw_arrow(fig_flow, 3.5, 0.5, 3.2, 0.5)
+        fig_flow.add_annotation(x=3.35, y=0.5, text="Yes", showarrow=False, font=dict(color=CMUT, size=11), yshift=15)
 
-        # 1. State Preparation A
-        draw_gate(fig_circ, 0.5, 2.5, -0.5, 3.5, "State Prep (𝒜)", CQNT)
-        
-        # 2. Oracle / Grover Q (Raised to power k)
-        draw_gate(fig_circ, 3.5, 6.5, -0.5, 3.5, "Grover Iteration (𝒬ᵏ)", CAMB)
-        
-        # 3. Measurement (Ancilla only for Amplitude Estimation)
-        fig_circ.add_shape(type="rect", x0=7.5, x1=8.5, y0=-0.3, y1=0.3, line=dict(color=BDR, width=2), fillcolor=CARD)
-        # Draw a little gauge meter symbol for measurement
-        fig_circ.add_trace(go.Scatter(x=[7.7, 8, 8.3], y=[0, 0.2, 0], mode='lines', line=dict(color=CMUT, width=1.5), hoverinfo='skip', showlegend=False))
-        fig_circ.add_annotation(x=8, y=0.5, text="Measure", showarrow=False, font=dict(color=CMUT, size=12))
-
-        # Format Circuit Plot
-        fig_circ.update_layout(
-            xaxis=dict(range=[-1, 9], showgrid=False, zeroline=False, visible=False),
-            yaxis=dict(range=[-1, 4], showgrid=False, zeroline=False, visible=False),
-            plot_bgcolor=PANEL, paper_bgcolor=DARK,
-            height=380, margin=dict(l=10, r=10, t=30, b=10)
+        fig_flow.update_layout(
+            xaxis=dict(range=[0, 8.5], showgrid=False, zeroline=False, visible=False),
+            yaxis=dict(range=[0, 5.5], showgrid=False, zeroline=False, visible=False),
+            plot_bgcolor=DARK, paper_bgcolor=DARK,
+            height=380, margin=dict(l=0, r=0, t=10, b=10)
         )
-        st.plotly_chart(fig_circ, use_container_width=True, theme=None)
+        st.plotly_chart(fig_flow, use_container_width=True, theme=None)
 
     # --- RIGHT: IQAE ANIMATED CONVERGENCE ---
-    with col_iqae:
-        st.markdown("#### 🎯 IQAE Algorithmic Convergence (Animated)")
+    with col_anim:
+        st.markdown("#### 🎯 Amplitude Estimate Convergence")
         st.write("Press **▶ PLAY** to watch the Chernoff bounds shrink exponentially as oracle calls ($M$) increase.")
 
-        # Simulate Realistic IQAE Iteration Data
         iters = 12
         pc_true = qres["pc"]
-        # Oracle calls grow exponentially in IQAE
-        m_arr = [int(2**(i*0.8)) for i in range(1, iters+1)] 
         
-        # Error bound shrinks as 1/M
+        m_arr = [int(2**(i*0.8)) for i in range(1, iters+1)] 
         base_error = pc_true * 1.5 
         err_arr = [base_error / (m * 0.5) for m in m_arr]
         
-        # Add slight quantum noise/oscillation to the estimate
         np.random.seed(42)
         est_arr = [pc_true + (np.random.randn() * err_arr[i] * 0.3) for i in range(iters)]
-        # Force the last frame to perfectly hit the calculated answer
         est_arr[-1] = pc_true 
         err_arr[-1] = (qres["ci"][1] - qres["ci"][0]) / 2
 
@@ -1208,15 +1254,12 @@ with tabs[4]: # Adjust index if your diagnostics tab is not tabs[4]
 
         fig_anim = go.Figure()
 
-        # Build initial empty traces
         fig_anim.add_trace(go.Scatter(x=[m_arr[0]], y=[upper_bound[0]], mode='lines+markers', name='Upper Bound', line=dict(color=CRED, width=2, dash='dot')))
         fig_anim.add_trace(go.Scatter(x=[m_arr[0]], y=[lower_bound[0]], mode='lines+markers', name='Lower Bound', line=dict(color=CGRN, width=2, dash='dot'), fill='tonexty', fillcolor='rgba(255,255,255,0.05)'))
         fig_anim.add_trace(go.Scatter(x=[m_arr[0]], y=[est_arr[0]], mode='lines+markers', name='Current Estimate', line=dict(color=CQNT, width=3)))
 
-        # Ground Truth Reference
         fig_anim.add_hline(y=pc_true, line=dict(color=CMUT, width=1, dash='dash'), annotation=dict(text="Target Pc", font=dict(color=CMUT, size=10)))
 
-        # Create Animation Frames
         frames = []
         for i in range(1, iters + 1):
             frames.append(go.Frame(
@@ -1245,27 +1288,7 @@ with tabs[4]: # Adjust index if your diagnostics tab is not tabs[4]
         )
         st.plotly_chart(fig_anim, use_container_width=True, theme=None)
 
-    st.divider()
-
-    # ------------------------------------------------------------------
-    # ROW 3: DETAILED TRANSPILATION LOGS (Terminal Output style)
-    # ------------------------------------------------------------------
-    st.markdown("#### 💻 Target Backend: IBM Quantum `ibm_brisbane` (127-qubit Eagle r3)")
-    st.write("Simulated transpilation metrics for mapping the logical circuit to physical hardware topology.")
     
-    # Fake terminal log box for visual engineering flair
-    terminal_code = f"""
-    > Transpiling IQAE circuit for target topology...
-    > PassManager: Optimization Level 3
-    > Unrolling to basis gates: ['cx', 'id', 'rz', 'sx', 'x']
-    > Routing complete. Added {(total_qubits*12):,} SWAP gates to satisfy heavy-hex connectivity.
-    > Final Physical Depth:     {est_depth * 3.4:,.0f}
-    > Final Physical CNOTs:     {est_cnots * 2.8:,.0f}
-    > Estimated Circuit Time:   {((est_depth * 3.4) * 0.5) / 1000:.2f} microseconds
-    > Status: READY
-    """
-    st.code(terminal_code, language="bash")
-
 
 with tabs[5]:
     st.markdown("### 📋 Mission Decision Report")
