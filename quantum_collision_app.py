@@ -600,6 +600,9 @@ with tabs[1]:
     # ----------------------------------------------------------------------
     # LEFT COLUMN: STATIC RELATIVE FRAME (User's requested plot)
     # ----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    # LEFT COLUMN: STATIC RELATIVE FRAME
+    # ----------------------------------------------------------------------
     with col_static:
         st.markdown("#### 🧊 3D Static Encounter (Relative)")
         st.write("Asset locked at origin. Debris trajectory shown over ±10 seconds.")
@@ -618,6 +621,24 @@ with tabs[1]:
         dv_R = np.dot(dv_eci, R_hat); dv_S = np.dot(dv_eci, S_hat); dv_W = np.dot(dv_eci, W_hat)
         
         mu_r = R["mu_r"]; mu_s = R["mu_s"]
+        R_hbr = R["R_hbr"]
+        
+        # --- NEW LOGIC: Match the Threat level to the Animation ---
+        dist = np.sqrt(mu_s**2 + mu_r**2)
+        pc_risk = R["pc_mc"]
+        
+        if dist <= R_hbr:
+            txt_static = f"<b>💥 DIRECT HIT! ({dist:.1f}m)</b>"
+            c_static = CRED
+            marker_size = 10
+        elif pc_risk > 1e-4:
+            txt_static = f"<b>⚠️ HIGH RISK CLOUD! Center miss: {dist:.1f}m</b>"
+            c_static = CAMB
+            marker_size = 8
+        else:
+            txt_static = f"<b>✅ CLEAR MISS ({dist:.1f}m)</b>"
+            c_static = CGRN
+            marker_size = 6
         
         # Trajectory line
         t_flyby = np.linspace(-10, 10, 50) 
@@ -633,20 +654,23 @@ with tabs[1]:
 
         # HBR Sphere
         u = np.linspace(0, 2 * np.pi, 30); v = np.linspace(0, np.pi, 30)
-        R_hbr = R["R_hbr"]
         x_sph = R_hbr * np.outer(np.cos(u), np.sin(v))
         y_sph = R_hbr * np.outer(np.sin(u), np.sin(v))
         z_sph = R_hbr * np.outer(np.ones(np.size(u)), np.cos(v))
 
         fig_static.add_trace(go.Surface(x=x_sph, y=y_sph, z=z_sph, colorscale=[[0, CRED], [1, CRED]], opacity=0.15, showscale=False, name="HBR"))
 
-        # Debris Trajectory & Marker
+        # Debris Trajectory
         fig_static.add_trace(go.Scatter3d(x=traj_S, y=traj_R, z=traj_W, mode='lines', line=dict(color=COBJ2, width=4), name="Debris Path"))
+        
+        # Debris Marker at TCA (Now dynamically colored and labeled!)
         fig_static.add_trace(go.Scatter3d(x=[mu_s], y=[mu_r], z=[0], mode='markers+text',
-            marker=dict(size=5, color=COBJ2, symbol='circle'), text=[f"Miss: {R['miss_km']*1000:.1f}m"], textposition="bottom center", name="Debris at TCA"))
+            marker=dict(size=marker_size, color=c_static, symbol='circle'), 
+            text=[txt_static], textposition="bottom center", name="Debris at TCA",
+            textfont=dict(color=c_static, size=14)))
 
         # Miss Vector
-        fig_static.add_trace(go.Scatter3d(x=[0, mu_s], y=[0, mu_r], z=[0, 0], mode='lines', line=dict(color=CRED, width=2, dash='dot'), name="Miss Vector"))
+        fig_static.add_trace(go.Scatter3d(x=[0, mu_s], y=[0, mu_r], z=[0, 0], mode='lines', line=dict(color=c_static, width=2, dash='dot'), name="Miss Vector"))
 
         fig_static.update_layout(
             scene=dict(
@@ -702,51 +726,56 @@ with tabs[1]:
         fig_anim.add_trace(go.Scatter3d(x=[traj_S2[0]], y=[traj_R2[0]], z=[traj_W2[0]], mode='markers+text',
             marker=dict(size=5, color=COBJ2, symbol='circle'), text=[f"T: -0.25s"], textposition="top center", name="Debris"))
 
-        # --- BUILD ANIMATION FRAMES ---
-        # --- BUILD ANIMATION FRAMES ---
+       # --- BUILD ANIMATION FRAMES ---
         frames = []
         for i, t in enumerate(t_anim):
             S1 = traj_S1[i]
             S2, R2, W2 = traj_S2[i], traj_R2[i], traj_W2[i]
             
+            # Deterministic distance between the centers
             dist = np.sqrt((S2-S1)**2 + (R2-0)**2 + (W2-0)**2)
             is_tca = (abs(t) == min(np.abs(t_anim)))
             
-            # --- 1. Larger Text and Markers at TCA ---
+            # --- UPDATED LOGIC: Bridging Physics and Probability ---
             if is_tca:
-                txt = f"<b>💥 COLLISION!</b>" if dist <= R_hbr else f"<b>✅ SAFE MISS</b>"
-                c = CRED if dist <= R_hbr else CGRN
-                marker_size = 18 if dist <= R_hbr else 14  # Bigger dot
-                text_size = 26  # Massive popup text
+                # Fetch the actual mathematical probability calculated in the background
+                pc_risk = R["pc_mc"] 
+                
+                if dist <= R_hbr:
+                    # The actual center points collided
+                    txt = f"<b>💥 DIRECT HIT! ({dist:.1f}m)</b>"
+                    c = CRED
+                    marker_size = 18
+                elif pc_risk > 1e-4:
+                    # The centers missed, but the uncertainty cloud is overlapping the asset!
+                    txt = f"<b>⚠️ HIGH RISK CLOUD! Center miss: {dist:.1f}m</b>"
+                    c = CAMB  # Amber/Orange warning
+                    marker_size = 16
+                else:
+                    # The centers missed AND the probability cloud is safely far away
+                    txt = f"<b>✅ CLEAR MISS ({dist:.1f}m)</b>"
+                    c = CGRN
+                    marker_size = 14
+                
+                text_size = 22
             else:
                 txt = f"T: {t:+.2f}s"
                 c = COBJ2
                 marker_size = 5
                 text_size = 10
 
-            # Generate the data for this specific microsecond
             frame_data = [
                 go.Scatter3d(x=[S1], y=[0], z=[0]), 
                 go.Surface(x=x_sph + S1, y=y_sph, z=z_sph), 
-                go.Scatter3d(x=[S2], y=[R2], z=[W2], 
-                             marker=dict(size=marker_size, color=c), 
-                             text=[txt], 
-                             textfont=dict(color=c, size=text_size))
+                go.Scatter3d(x=[S2], y=[R2], z=[W2], marker=dict(size=marker_size, color=c), text=[txt], textfont=dict(color=c, size=text_size))
             ]
 
-            # Add the standard frame
             frames.append(go.Frame(data=frame_data, traces=[0, 1, 4], name=f"frame_{i}"))
 
-            # --- 2. The 2-Second Cinematic Pause ---
+            # The 2-Second Cinematic Pause
             if is_tca:
-                # Our player runs at 60ms per frame. 
-                # 33 duplicated frames * 60ms = ~1.98 seconds of frozen time!
                 for pause_idx in range(33):
-                    frames.append(go.Frame(
-                        data=frame_data, 
-                        traces=[0, 1, 4], 
-                        name=f"frame_{i}_pause_{pause_idx}"
-                    ))
+                    frames.append(go.Frame(data=frame_data, traces=[0, 1, 4], name=f"frame_{i}_pause_{pause_idx}"))
 
         fig_anim.frames = frames
 
