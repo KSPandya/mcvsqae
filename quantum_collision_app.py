@@ -29,7 +29,8 @@ from plotly.subplots import make_subplots
 import time
 import streamlit as st
 st.set_page_config(layout="wide")
-
+if 'results' not in st.session_state:
+    st.session_state.results = None
 st.markdown("""
 <style>
 body {
@@ -388,31 +389,30 @@ if run_btn:
                 window_sec=tca_window*60, coarse_dt=coarse_step)
             t_tca = time.perf_counter() - t_tca_start
 
+            # r1, r2 are the POSITION vectors (km)
+            # v1, v2 are the VELOCITY vectors (km/s)
             r1, v1 = sgp4_state(sat1, jd_tca, fr_tca)
             r2, v2 = sgp4_state(sat2, jd_tca, fr_tca)
+            
             def rsw_frame(r1, v1, r2, v2):
                 delta = r2 - r1
-            
                 R_hat = r1 / np.linalg.norm(r1)
                 W_hat = np.cross(r1, v1)
                 W_hat /= np.linalg.norm(W_hat)
                 S_hat = np.cross(W_hat, R_hat)
-            
                 dr_R = np.dot(delta, R_hat)
                 dr_S = np.dot(delta, S_hat)
-            
                 return dr_R, dr_S
-                      
+                  
             st.write(f"🎲 Running Monte Carlo  (N = {mc_N:,}) …")
             t_mc_start = time.perf_counter()
-            dr_R, dr_S = rsw_frame(r1, v1, r2, v2)
-
-            dr_R, dr_S = rsw_frame(r1, v1, r2, v2)
+            dr_R, dr_S = rsw_frame(r1, v1, r2, v2) # (Removed the duplicate line here)
 
             if use_override:
                 # Use the manual sliders so we can force a close-approach scenario
                 mu_r_phys = mu_r
                 mu_s_phys = mu_s
+                # Update miss_km based on the manual sliders
                 miss_km = np.sqrt(mu_r**2 + mu_s**2) / 1000.0
             else:
                 # Use the true orbital physics
@@ -432,16 +432,12 @@ if run_btn:
             t_q     = time.perf_counter() - t_q_start
         
             p_est = qres["pc"]
-            # Calculate the actual error margin IQAE achieved (half the CI width)
             iqae_margin = max((qres["ci"][1] - qres["ci"][0]) / 2.0, 1e-12)
             
             if p_est > 0.0 and p_est < 1.0:
-                # Calculate the Z-score for your chosen confidence level (e.g., 95% -> ~1.96)
                 z_score = norm.ppf(1.0 - (1.0 - alpha_ci / 100.0) / 2.0)
-                # Exact classical MC samples needed to achieve the same variance
                 mc_equiv = int(np.ceil((z_score**2 * p_est * (1.0 - p_est)) / (iqae_margin**2)))
             else:
-                # Fallback to worst-case Hoeffding bound if the probability is exactly 0
                 mc_equiv = int(np.ceil(1.0 / epsilon**2))
 
             speedup  = mc_equiv / max(qres["queries"], 1)
@@ -449,8 +445,8 @@ if run_btn:
             st.session_state.results = dict(
                 obj1=obj1_name, obj2=obj2_name,
                 miss_km=miss_km, best_t_s=best_t, t_tca=t_tca,
-                r1=r1, v1=v1, r2=r2, v2=v2,
-                mu_r=mu_r, mu_s=mu_s,
+                r1=r1, v1=v1, r2=r2, v2=v2,   # <-- NOTE: r1 is position, v1 is velocity
+                mu_r=mu_r_phys, mu_s=mu_s_phys, # <-- NOTE: explicitly save the _phys values
                 sig_r=sig_r, sig_s=sig_s, R_hbr=R_hbr,
                 pc_mc=pc_mc, t_mc=t_mc,
                 qres=qres, t_q=t_q,
@@ -462,14 +458,13 @@ if run_btn:
             status.update(label=f"❌ Error: {e}", state="error")
             st.exception(e)
 
-
+# --- UNPACKING THE VAULT ---
 if st.session_state.results is None:
     st.info("⬅  Configure parameters in the sidebar and press **▶ RUN SIMULATION**")
     st.stop()
 
 R = st.session_state.results
 qres = R["qres"]
-
 tabs = st.tabs([
     "🌍 Overview",
     "📡 SGP4 Propagation",
