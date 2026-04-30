@@ -446,10 +446,15 @@ tabs = st.tabs([
 ])
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 0 — OVERVIEW (In-Depth Analytics)
+# ══════════════════════════════════════════════════════════════════════════════
 with tabs[0]:
-    st.markdown("### 🌍 Mission Overview")
+    st.markdown("### 🌍 Mission Overview & Encounter Analytics")
 
-    # Risk badge
+    # ---------------------------------------------------------
+    # 1. THREAT LEVEL BADGE
+    # ---------------------------------------------------------
     pc = R["pc_mc"]
     if pc > 1e-4:
         risk_html = '<div class="risk-high">🔴  HIGH RISK — MANOEUVRE REQUIRED</div>'
@@ -460,48 +465,116 @@ with tabs[0]:
     st.markdown(risk_html, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Top-level metrics
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Object 1",       R["obj1"].split("(")[0].strip())
-    c2.metric("Object 2",       R["obj2"].split("(")[0].strip())
-    c3.metric("Miss Distance",  f"{R['miss_km']*1000:.1f} m")
-    c4.metric("Pc (Monte Carlo)", f"{R['pc_mc']:.3e}")
-    c5.metric("Pc (Quantum IQAE)", f"{qres['pc']:.3e}")
+    # Calculate Relative Velocity
+    v_rel_km_s = np.linalg.norm(R['v1'] - R['v2'])
 
-    st.divider()
+    # ---------------------------------------------------------
+    # 2. ENCOUNTER GEOMETRY (The Physics)
+    # ---------------------------------------------------------
+    st.markdown("#### 📐 Encounter Geometry at TCA")
+    g1, g2, g3, g4, g5 = st.columns(5)
+    g1.metric("Target Asset", R["obj1"].split("(")[0].strip())
+    g2.metric("Threat Object", R["obj2"].split("(")[0].strip())
+    g3.metric("Relative Velocity", f"{v_rel_km_s:.2f} km/s")
+    g4.metric("Total Miss Distance", f"{R['miss_km']*1000:.1f} m")
+    g5.metric("Combined HBR", f"{R['R_hbr']:.1f} m")
 
+    # ---------------------------------------------------------
+    # 3. PROBABILITY METRICS (The Math)
+    # ---------------------------------------------------------
+    st.markdown("#### 🎲 Collision Probability ($P_c$) Estimates")
+    p1, p2, p3 = st.columns(3)
+    
+    # Render with custom colors for emphasis
+    p1.markdown(f"""
+        <div style="background:#0f1f38; border:1px solid #f59e0b; border-radius:8px; padding:15px;">
+            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:5px;">Classical Monte Carlo (N={R['mc_N']:,})</div>
+            <div style="color:#f59e0b; font-size:1.8rem; font-weight:bold; font-family:monospace;">{R['pc_mc']:.4e}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    p2.markdown(f"""
+        <div style="background:#0f1f38; border:1px solid #38bdf8; border-radius:8px; padding:15px;">
+            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:5px;">Quantum IQAE (Queries={qres['queries']})</div>
+            <div style="color:#38bdf8; font-size:1.8rem; font-weight:bold; font-family:monospace;">{qres['pc']:.4e}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    p3.markdown(f"""
+        <div style="background:#0f1f38; border:1px solid #a78bfa; border-radius:8px; padding:15px;">
+            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:5px;">Discrete Truth ({qres['grid']}x{qres['grid']} Grid)</div>
+            <div style="color:#a78bfa; font-size:1.8rem; font-weight:bold; font-family:monospace;">{qres['pc_disc']:.4e}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ---------------------------------------------------------
+    # 4. QUANTUM ADVANTAGE & COMPARISON
+    # ---------------------------------------------------------
     col_l, col_r = st.columns(2)
 
     with col_l:
-        st.markdown("#### Classical vs Quantum at a Glance")
+        st.markdown("#### ⚖️ Method Comparison Profile")
         comparison = {
-            "Method":          ["Classical MC",            "Quantum IQAE"],
-            "Pc Estimate":     [f"{R['pc_mc']:.4e}",       f"{qres['pc']:.4e}"],
-            "Queries / Samples":[f"{R['mc_N']:,}",         f"{qres['queries']}"],
-            "Wall-clock Time": [f"{R['t_mc']*1e3:.1f} ms", f"{R['t_q']:.2f} s"],
-            "Error Scaling":   ["O(N⁻¹/²)",                "O(M⁻¹)"],
-            "Uncertainty":     ["Post-hoc estimate",       "Native 95% CI"],
+            "Parameter":           ["Wall-clock Time", "Convergence Scaling", "Confidence Bounds", "State Preparation"],
+            "Classical Pipeline":  [f"{R['t_mc']*1e3:.1f} ms", "O(1 / √N) — Slow", "Post-hoc statistical", "Continuous PDF"],
+            "Quantum Pipeline":    [f"{R['t_q']:.2f} s (Simulated)", "O(1 / M) — Quadratic", f"Native {R['alpha_ci']}% CI bounds", f"Pixelated ({qres['grid']}² states)"],
         }
         import pandas as pd
         st.dataframe(pd.DataFrame(comparison), use_container_width=True, hide_index=True)
 
     with col_r:
-        st.markdown("#### Quantum Advantage Summary")
+        st.markdown("#### ⚡ Quantum Advantage Summary")
         st.markdown(f"""
 <div class="speedup-box">
   <div style="font-size:2.8rem;font-weight:800;
     background:linear-gradient(90deg,#a78bfa,#38bdf8);
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;
     background-clip:text">{R['speedup']:,.0f}×</div>
-  <div style="color:#64748b;margin-top:.3rem">Quantum Speedup over Classical</div>
-  <hr style="border-color:#1a3050;margin:.8rem 0">
-  <div style="font-size:.85rem;color:#94a3b8">
-    MC needs <strong style="color:#f59e0b">{R['mc_equiv']:,}</strong> samples to match IQAE accuracy<br>
-    IQAE used only <strong style="color:#38bdf8">{qres['queries']}</strong> oracle queries<br>
-    IQAE 95% CI: [{qres['ci'][0]:.4e}, {qres['ci'][1]:.4e}]
+  <div style="color:#64748b; margin-top:.3rem;">Theoretical Target Speedup</div>
+  <hr style="border-color:#1a3050; margin:.8rem 0;">
+  <div style="font-size:.85rem; color:#94a3b8; text-align:left; padding-left:10px;">
+    • <b>Target Error (ε):</b> {R['epsilon']}<br>
+    • <b>IQAE Oracle Queries (M):</b> <span style="color:#38bdf8">{qres['queries']:,}</span><br>
+    • <b>Required MC Samples (N):</b> <span style="color:#f59e0b">{R['mc_equiv']:,}</span><br>
+    • <b>95% CI Bounding:</b> [{qres['ci'][0]:.3e}, {qres['ci'][1]:.3e}]
   </div>
 </div>
 """, unsafe_allow_html=True)
+
+    # ---------------------------------------------------------
+    # 5. EXPANDABLE MATH & HELPER FUNCTIONS
+    # ---------------------------------------------------------
+    st.divider()
+    with st.expander("📚 View Calculation Methodology & Helper Equations"):
+        st.markdown("#### 1. Classical 2D Probability of Collision ($P_c$)")
+        st.write("The classical probability is calculated by integrating the 2D Gaussian probability density function (PDF) over the circular cross-section of the combined Hard-Body Radius ($R_{HBR}$) in the Encounter Plane.")
+        st.latex(r"""
+        P_c = \iint_{x^2 + y^2 \leq R_{HBR}^2} \frac{1}{2\pi\sigma_x\sigma_y} \exp\left[ -\frac{1}{2} \left( \frac{(x-\mu_x)^2}{\sigma_x^2} + \frac{(y-\mu_y)^2}{\sigma_y^2} \right) \right] dx dy
+        """)
+        
+        st.markdown("#### 2. Quantum State Preparation ($\ket{\psi}$)")
+        st.write("To evaluate this on a quantum computer, the continuous Encounter Plane is discretized into a finite $G \times G$ grid using $q$ qubits per axis. The probabilities are loaded into the amplitudes of the quantum state.")
+        st.latex(r"""
+        \ket{\psi}_{n} = \sum_{i=0}^{G-1} \sum_{j=0}^{G-1} \sqrt{p(x_i, y_j)} \ket{i}_x \ket{j}_y \ket{0}_{obj}
+        """)
+        
+        st.markdown("#### 3. The Collision Oracle ($U_\omega$)")
+        st.write("A quantum oracle flags the states where the Euclidean distance to the origin is less than the Hard-Body Radius by flipping an objective qubit $\ket{obj}$.")
+        st.latex(r"""
+        U_\omega \ket{i,j}\ket{0} = 
+        \begin{cases} 
+        \ket{i,j}\ket{1} & \text{if } \sqrt{x_i^2 + y_j^2} \leq R_{HBR} \\
+        \ket{i,j}\ket{0} & \text{otherwise}
+        \end{cases}
+        """)
+
+        st.markdown("#### 4. Speedup Formulation (Variance Matching)")
+        st.write("The classical sample requirement ($N$) is dynamically calculated by matching the variance of a classical binomial distribution to the exact Confidence Interval bound achieved by the Quantum IQAE algorithm.")
+        st.latex(r"""
+        N_{equiv} = \left\lceil \frac{Z^2 \cdot P_c(1 - P_c)}{\varepsilon_{IQAE}^2} \right\rceil \quad \longrightarrow \quad \text{Speedup} = \frac{N_{equiv}}{M_{queries}}
+        """)
 
 
 with tabs[1]:
