@@ -1408,42 +1408,69 @@ with tabs[5]:
     st.divider()
 
     # ------------------------------------------------------------------
-    # ROW 3: DECISION MATRIX FLOWCHART (Educational)
+    # ROW 3: COLA DECISION LOGIC (Structured Flowchart)
     # ------------------------------------------------------------------
-    st.markdown("#### 🧭 Decision Logic: The COLA Algorithm")
-    st.write("How this dashboard arrives at the mission recommendation.")
+    st.divider()
+    st.markdown("#### 🧭 Decision Logic: Quantum-Informed COLA Protocol")
+    st.write("The operational branching logic used to transform the Quantum Probability ($P_c$) into mission commands.")
     
     fig_dec = go.Figure()
     
-    # Helper for drawing nodes
-    def draw_node(fig, x, y, text, color, width=2.5):
-        fig.add_shape(type="rect", x0=x-width/2, x1=x+width/2, y0=y-0.3, y1=y+0.3, 
+    # Define vertical levels for the hierarchy
+    L1, L2, L3, L4 = 4.5, 3.2, 1.8, 0.5
+
+    # Helper for drawing professional nodes
+    def draw_node(fig, x, y, text, color, width=2.4, height=0.6):
+        fig.add_shape(type="rect", x0=x-width/2, x1=x+width/2, y0=y-height/2, y1=y+height/2, 
                       line=dict(color=color, width=2), fillcolor=PANEL)
-        fig.add_annotation(x=x, y=y, text=text, showarrow=False, font=dict(color=CTXT, size=11))
+        fig.add_annotation(x=x, y=y, text=text, showarrow=False, font=dict(color=CTXT, size=11, family="monospace"))
 
-    # Flowchart Logic
-    draw_node(fig_dec, 5, 4, "Quantum Engine Converged?", CQNT)
-    draw_node(fig_dec, 5, 2.5, "Pc > 10⁻⁴?", CRED)
-    draw_node(fig_dec, 2, 1, "Plan Evasive Burn", CRED)
-    draw_node(fig_dec, 5, 1, "Pc > 10⁻⁶?", CAMB)
-    draw_node(fig_dec, 8, 1, "No Action Required", CGRN)
-
-    # Connections
-    def draw_line(fig, x0, y0, x1, y1):
+    # Helper for drawing clean orthogonal arrows
+    def draw_path(fig, x0, y0, x1, y1):
         fig.add_annotation(x=x1, y=y1, ax=x0, ay=y0, xref="x", yref="y", axref="x", ayref="y",
-                           showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor=CMUT)
+                           showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1.5, arrowcolor=CMUT)
 
-    draw_line(fig_dec, 5, 3.7, 5, 2.8) # Down
-    draw_line(fig_dec, 3.75, 2.5, 2, 1.3) # Yes to Maneuver
-    draw_line(fig_dec, 5, 2.2, 5, 1.3) # No to Maneuver -> Pc > 10^-6?
-    draw_line(fig_dec, 6.25, 1, 8, 1) # No to 10^-6
+    # --- LEVEL 1: INPUT ---
+    draw_node(fig_dec, 5, L1, "<b>START</b><br>Quantum IQAE Result", CACC)
 
-    fig_dec.update_layout(xaxis=dict(visible=False, range=[0, 10]), yaxis=dict(visible=False, range=[0, 5]),
-                         plot_bgcolor=DARK, paper_bgcolor=DARK, height=250, margin=dict(l=0, r=0, t=0, b=0))
+    # --- LEVEL 2: PRIMARY THRESHOLD ---
+    draw_node(fig_dec, 5, L2, f"<b>Pc > {THRESHOLD_MANEUVER:.0e}?</b>", CQNT)
+    draw_path(fig_dec, 5, L1-0.3, 5, L2+0.3)
+
+    # --- LEVEL 3: BRANCHES ---
+    # Maneuver Path (Yes)
+    draw_node(fig_dec, 2, L3, "<b>ACTION: MANEUVER</b><br>Execute CAM Burn", CRED)
+    draw_path(fig_dec, 3.8, L2, 2, L3+0.3) 
+    fig_dec.add_annotation(x=2.7, y=L2, text="YES", showarrow=False, font=dict(color=CRED, size=10))
+
+    # Secondary Check Path (No)
+    draw_node(fig_dec, 5, L3, f"<b>Pc > {THRESHOLD_MONITOR:.0e}?</b>", CAMB)
+    draw_path(fig_dec, 5, L2-0.3, 5, L3+0.3)
+    fig_dec.add_annotation(x=5.3, y=2.5, text="NO", showarrow=False, font=dict(color=CMUT, size=10))
+
+    # --- LEVEL 4: FINAL ACTIONS ---
+    # Monitor Path
+    draw_node(fig_dec, 5, L4, "<b>ACTION: MONITOR</b><br>Refine Orbit via Radar", CAMB)
+    draw_path(fig_dec, 5, L3-0.3, 5, L4+0.3)
+    fig_dec.add_annotation(x=5.4, y=1.2, text="YES", showarrow=False, font=dict(color=CAMB, size=10))
+
+    # Safe Path
+    draw_node(fig_dec, 8, L4, "<b>ACTION: NOMINAL</b><br>Resume Operations", CGRN)
+    draw_path(fig_dec, 6.2, L3, 8, L4+0.3)
+    fig_dec.add_annotation(x=7.3, y=L3, text="NO", showarrow=False, font=dict(color=CGRN, size=10))
+
+    # Formatting the Flowchart Canvas
+    fig_dec.update_layout(
+        xaxis=dict(visible=False, range=[0, 10]), 
+        yaxis=dict(visible=False, range=[0, 5.2]),
+        plot_bgcolor="rgba(0,0,0,0)", 
+        paper_bgcolor=DARK, 
+        height=400, 
+        margin=dict(l=10, r=10, t=10, b=10)
+    )
     st.plotly_chart(fig_dec, use_container_width=True, theme=None)
-    st.divider()
     
-
+    st.divider()
     st.markdown("#### 🔍 Technical Audit & Convergence Ledger")
     st.write("Full parameter set and quantum-classical comparison data for verification.")
     
