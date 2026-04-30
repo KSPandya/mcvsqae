@@ -311,7 +311,7 @@ def quantum_iqae(mu_r, mu_s, sig_r, sig_s, R, epsilon, alpha, q_dim):
         "mask":      mask_disc,
         "R_g":       R_g,
         "S_g":       S_g,
-    "qc": qc,
+    "circuit": qc,
     }
 
 
@@ -1206,7 +1206,7 @@ with tabs[4]:
         st.write("Press **▶ PLAY** to watch the Chernoff bounds shrink exponentially as oracle calls ($M$) increase.")
 
         iters = 12
-        pc_true = qres["pc"]
+        pc_true = qres["circuit"]
         
         m_arr = [int(2**(i*0.8)) for i in range(1, iters+1)] 
         base_error = max(pc_true * 1.5, 1e-5)
