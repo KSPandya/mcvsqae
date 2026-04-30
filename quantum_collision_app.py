@@ -1400,7 +1400,7 @@ with tabs[5]:
         st.plotly_chart(fig_risk, use_container_width=True, theme=None)
 
     with col_cons:
-        st.markdown("**Operational Directive**")
+        st.markdown("**Operational Directive (NOT ACTUAL)**")
         st.info(action_advice)
         
         st.markdown("**Maneuver Feasibility**")
