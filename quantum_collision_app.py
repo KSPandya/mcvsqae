@@ -703,6 +703,7 @@ with tabs[1]:
             marker=dict(size=5, color=COBJ2, symbol='circle'), text=[f"T: -0.25s"], textposition="top center", name="Debris"))
 
         # --- BUILD ANIMATION FRAMES ---
+        # --- BUILD ANIMATION FRAMES ---
         frames = []
         for i, t in enumerate(t_anim):
             S1 = traj_S1[i]
@@ -711,22 +712,41 @@ with tabs[1]:
             dist = np.sqrt((S2-S1)**2 + (R2-0)**2 + (W2-0)**2)
             is_tca = (abs(t) == min(np.abs(t_anim)))
             
+            # --- 1. Larger Text and Markers at TCA ---
             if is_tca:
                 txt = f"<b>💥 COLLISION!</b>" if dist <= R_hbr else f"<b>✅ SAFE MISS</b>"
                 c = CRED if dist <= R_hbr else CGRN
-                size = 14 if dist <= R_hbr else 10
+                marker_size = 18 if dist <= R_hbr else 14  # Bigger dot
+                text_size = 26  # Massive popup text
             else:
-                txt = f"T: {t:+.2f}s"; c = COBJ2; size = 5
+                txt = f"T: {t:+.2f}s"
+                c = COBJ2
+                marker_size = 5
+                text_size = 10
 
-            # We must update Trace 0 (Asset), Trace 1 (Sphere), and Trace 4 (Debris)
-            frames.append(go.Frame(
-                data=[
-                    go.Scatter3d(x=[S1], y=[0], z=[0]), 
-                    go.Surface(x=x_sph + S1, y=y_sph, z=z_sph), 
-                    go.Scatter3d(x=[S2], y=[R2], z=[W2], marker=dict(size=size, color=c), text=[txt], textfont=dict(color=c))
-                ],
-                traces=[0, 1, 4], name=f"frame_{i}"
-            ))
+            # Generate the data for this specific microsecond
+            frame_data = [
+                go.Scatter3d(x=[S1], y=[0], z=[0]), 
+                go.Surface(x=x_sph + S1, y=y_sph, z=z_sph), 
+                go.Scatter3d(x=[S2], y=[R2], z=[W2], 
+                             marker=dict(size=marker_size, color=c), 
+                             text=[txt], 
+                             textfont=dict(color=c, size=text_size))
+            ]
+
+            # Add the standard frame
+            frames.append(go.Frame(data=frame_data, traces=[0, 1, 4], name=f"frame_{i}"))
+
+            # --- 2. The 2-Second Cinematic Pause ---
+            if is_tca:
+                # Our player runs at 60ms per frame. 
+                # 33 duplicated frames * 60ms = ~1.98 seconds of frozen time!
+                for pause_idx in range(33):
+                    frames.append(go.Frame(
+                        data=frame_data, 
+                        traces=[0, 1, 4], 
+                        name=f"frame_{i}_pause_{pause_idx}"
+                    ))
 
         fig_anim.frames = frames
 
