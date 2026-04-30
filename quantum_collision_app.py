@@ -554,6 +554,7 @@ with tabs[1]:
     st.divider()
 
     # --- HELPER: Convert Cartesian Vectors to Orbital Elements ---
+    # --- HELPER: Convert Cartesian Vectors to Orbital Elements ---
     def get_orbital_elements(r_vec, v_vec):
         mu = 398600.4418 # Earth's gravitational parameter (km^3/s^2)
         r = np.linalg.norm(r_vec)
@@ -567,9 +568,26 @@ with tabs[1]:
         ecc = np.linalg.norm(e_vec)
         return a - 6371.0, v, ecc, inc  # Alt(km), Vel(km/s), Ecc, Inc(deg)
 
-    alt1, vel1, ecc1, inc1 = get_orbital_elements(R['r1'], R['v1'])
-    alt2, vel2, ecc2, inc2 = get_orbital_elements(R['r2'], R['v2'])
+    # --- DYNAMIC OVERRIDE INJECTION FOR TABLES ---
+    r1 = R['r1']; v1 = R['v1']
+    r2_raw = R['r2']; v2_raw = R['v2']
 
+    # 1. Calculate Asset's exact RSW Frame vectors
+    R_hat = r1 / np.linalg.norm(r1)
+    W_hat = np.cross(r1, v1)
+    W_hat /= np.linalg.norm(W_hat)
+    S_hat = np.cross(W_hat, R_hat)
+    
+    # 2. Reverse-project the Slider math (mu_r, mu_s) back into Global ECI space
+    # (Dividing by 1000 converts your slider meters back into kilometers)
+    r2_eff = r1 + (R['mu_r'] / 1000.0) * R_hat + (R['mu_s'] / 1000.0) * S_hat
+    v2_eff = v2_raw # Velocity remains unchanged by the distance sliders
+    
+    # 3. Calculate Orbital Elements using the Overridden Effective position!
+    alt1, vel1, ecc1, inc1 = get_orbital_elements(r1, v1)
+    alt2, vel2, ecc2, inc2 = get_orbital_elements(r2_eff, v2_eff)
+
+    # --- DATA TABLES ROW ---
     col_t1, col_t2 = st.columns(2)
     import pandas as pd
     with col_t1:
@@ -585,13 +603,12 @@ with tabs[1]:
         st.markdown("**🧭 ECI State Vectors (km, km/s)**", unsafe_allow_html=True)
         sv_data = {
             "Component": ["X", "Y", "Z", "Vx", "Vy", "Vz"],
-            "Asset": [f"{R['r1'][0]:.2f}", f"{R['r1'][1]:.2f}", f"{R['r1'][2]:.2f}",
-                      f"{R['v1'][0]:.4f}", f"{R['v1'][1]:.4f}", f"{R['v1'][2]:.4f}"],
-            "Threat": [f"{R['r2'][0]:.2f}", f"{R['r2'][1]:.2f}", f"{R['r2'][2]:.2f}",
-                       f"{R['v2'][0]:.4f}", f"{R['v2'][1]:.4f}", f"{R['v2'][2]:.4f}"]
+            "Asset": [f"{r1[0]:.2f}", f"{r1[1]:.2f}", f"{r1[2]:.2f}",
+                      f"{v1[0]:.4f}", f"{v1[1]:.4f}", f"{v1[2]:.4f}"],
+            "Threat": [f"{r2_eff[0]:.2f}", f"{r2_eff[1]:.2f}", f"{r2_eff[2]:.2f}",
+                       f"{v2_eff[0]:.4f}", f"{v2_eff[1]:.4f}", f"{v2_eff[2]:.4f}"]
         }
         st.dataframe(pd.DataFrame(sv_data), use_container_width=True, hide_index=True)
-
     st.divider()
 
     # --- PLOTS ROW ---
