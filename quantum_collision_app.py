@@ -949,164 +949,177 @@ with tabs[2]:
     st.plotly_chart(fig_dist, use_container_width=True, theme=None)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 3 — SCALING & COMPLEXITY (The Math Engine masterclass)
+# ══════════════════════════════════════════════════════════════════════════════
 with tabs[3]:
-    st.markdown("### 📈 Scaling & Complexity Analysis")
+    st.markdown("### 📈 Scaling & Computational Complexity Analysis")
+    st.write("This section breaks down the specific algorithmic cost. It bridges theoretical complexity (Big O) with the actual resources used in this specific simulation run.")
 
-    # --------------------------------------------------
-    # ACTUAL RUN DATA (Linked to true physics math)
-    # --------------------------------------------------
+    # ------------------------------------------------------------------
+    # ROW 1: DYNAMIC SCALING GAUGE METRICS (Anchored to actual run)
+    # ------------------------------------------------------------------
+    # We create the 'Effective Constants' (c0 and q0) so the asymptotic 
+    # math perfectly intersects your specific simulation data points.
     eps_used = R["epsilon"]
     queries  = max(R["qres"]["queries"], 1)
-    mc_equiv = R["mc_equiv"] # Uses the precise Z-score variance from the pipeline!
-    speedup_actual = R["speedup"]
+    # R["mc_equiv"] uses the precise variance from the current covariance sliders!
+    mc_equiv = R["mc_equiv"] 
 
-    # --------------------------------------------------
-    # THEORETICAL SCALING 
-    # --------------------------------------------------
-    eps_arr = np.logspace(-1, -5, 300)
+    # We scale the gauges dynamically based on current required precision.
+    max_c_gauge = 10**(np.ceil(np.log10(mc_equiv) + 0.5))
+    max_q_gauge = 10**(np.ceil(np.log10(queries) + 0.5))
 
-    # We scale the theoretical lines so they perfectly pass through our actual data point
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        st.markdown("**Classical Sample Cost**")
+        fig_gauge_c = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = mc_equiv,
+            number = {'font': {'color': CAMB, 'size':35}},
+            gauge = {
+                'axis': {'range': [1000, max_c_gauge], 'type': 'log', 'tickfont': {'color': CMUT}},
+                'bar': {'color': CAMB},
+                'bgcolor': PANEL, 'borderwidth': 2, 'bordercolor': BDR,
+                'threshold': {'line': {'color': CRED, 'width': 4}, 'thickness': 0.75, 'value': mc_equiv}
+            },
+            title = {'text': f"Equivalent Classical N<br>(O(1/ε²)) at ε={eps_used}", 'font': {'color': CMUT, 'size': 12}}
+        ))
+        fig_gauge_c.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=240, margin=dict(l=30, r=30, t=10, b=10))
+        st.plotly_chart(fig_gauge_c, use_container_width=True, theme=None)
+
+    with c2:
+        st.markdown("**Quantum Query Cost**")
+        fig_gauge_q = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = queries,
+            number = {'font': {'color': CQNT, 'size':35}},
+            gauge = {
+                'axis': {'range': [10, max_q_gauge], 'type': 'log', 'tickfont': {'color': CMUT}},
+                'bar': {'color': CQNT},
+                'bgcolor': PANEL, 'borderwidth': 2, 'bordercolor': BDR,
+                'threshold': {'line': {'color': CRED, 'width': 4}, 'thickness': 0.75, 'value': queries}
+            },
+            title = {'text': f"Quantum IQAE Queries M<br>(O(1/ε)) at ε={eps_used}", 'font': {'color': CMUT, 'size': 12}}
+        ))
+        fig_gauge_q.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=240, margin=dict(l=30, r=30, t=10, b=10))
+        st.plotly_chart(fig_gauge_q, use_container_width=True, theme=None)
+
+    with c3:
+        st.markdown("**Theoretical Target Speedup**")
+        speedup = R["speedup"]
+        max_s_gauge = 10**(np.ceil(np.log10(speedup) + 0.5))
+        fig_gauge_s = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = speedup,
+            number = {'suffix': "×", 'font': {'color': CGRN, 'size':35}},
+            gauge = {
+                'axis': {'range': [1, max_s_gauge], 'type': 'log', 'tickfont': {'color': CMUT}},
+                'bar': {'color': CGRN},
+                'bgcolor': PANEL, 'borderwidth': 2, 'bordercolor': BDR,
+                'threshold': {'line': {'color': CRED, 'width': 4}, 'thickness': 0.75, 'value': speedup}
+            },
+            title = {'text': f"Calculated Speedup Ratio<br>(N_{{equiv}} / M)", 'font': {'color': CMUT, 'size': 12}}
+        ))
+        fig_gauge_s.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=240, margin=dict(l=30, r=30, t=10, b=10))
+        st.plotly_chart(fig_gauge_s, use_container_width=True, theme=None)
+
+    st.divider()
+
+    # ------------------------------------------------------------------
+    # ROW 2: SIDE-BY-SIDE RESOURCE vs PRECISION TRADEOFF
+    # ------------------------------------------------------------------
+    col_scaling, col_conv = st.columns([1, 1.2])
+    
+    # Mathematical anchor points for the curves
     c_factor = mc_equiv * (eps_used**2)
     q_factor = queries * eps_used
-
+    
+    # Generate asymptotic scaling data (from current precision to extreme 10^-5)
+    eps_arr = np.logspace(np.log10(min(eps_used*10, 0.1)), np.log10(max(eps_used/100, 1e-5)), 300)
     N_c = c_factor / (eps_arr**2)  # Classical O(1/ε²)
     M_q = q_factor / eps_arr       # Quantum O(1/ε)
 
-    speedup_theory = N_c / M_q 
+    # LEFT COLUMN: THEORETICAL COST TRADEOFF (LOG-LOG)
+    with col_scaling:
+        st.markdown("#### ⚖️ Complexity vs. Target Precision (ε)")
+        st.write("Visualization of algorithmic 'Big O' costs. Quantum scaling (blue) scales linearly, while Classical (orange) is a parabolic penalty as precision increases.")
+        fig_scale = go.Figure()
+        
+        # Theoretical Curves
+        fig_scale.add_trace(go.Scatter(x=eps_arr, y=N_c, mode='lines', name='Classical O(ε⁻²)', line=dict(color=CAMB, width=2.5)))
+        fig_scale.add_trace(go.Scatter(x=eps_arr, y=M_q, mode='lines', name='Quantum O(ε⁻¹)', line=dict(color=CQNT, width=2.5)))
+        
+        # Dynamic marker for current run data point
+        fig_scale.add_trace(go.Scatter(x=[eps_used], y=[mc_equiv], mode='markers', marker=dict(size=12, color=CAMB, symbol='circle'), name='Current Run MC-Eq'))
+        fig_scale.add_trace(go.Scatter(x=[eps_used], y=[queries], mode='markers', marker=dict(size=14, color=CQNT, symbol='star'), name='Current Run IQAE-M'))
 
-    # --------------------------------------------------
-    # FIGURE 1: SCALING 
-    # --------------------------------------------------
-    fig_scale = make_subplots(
-        rows=1, cols=2,
-        subplot_titles=[
-            "Resources vs Target Precision",
-            "Quantum Speedup Factor"
-        ],
-        horizontal_spacing=0.15 # FIX: Stops the right graph from crushing the left graph
-    )
+        # Standard vertical reference for current Target ε
+        fig_scale.add_vline(x=eps_used, line=dict(color=CTXT, width=1, dash='dot'), annotation=dict(text=f"Current ε", font=dict(color=CTXT, size=10)))
 
-    # ---------------- LEFT PANEL ----------------
-    fig_scale.add_trace(go.Scatter(
-        x=eps_arr, y=N_c, mode='lines',
-        name='Classical O(ε⁻²)', line=dict(color=CAMB, width=2.5)
-    ), row=1, col=1)
+        fig_scale.update_layout(
+            xaxis=dict(type='log', title='Target ε (Precision)', showgrid=True, gridcolor=BDR, color=CMUT, autorange='reversed', title_standoff=15),
+            yaxis=dict(type='log', title='Computational Resources (N or M)', showgrid=True, gridcolor=BDR, color=CMUT, title_standoff=15),
+            plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
+            legend=dict(bgcolor=CARD, bordercolor=BDR, x=0.05, y=0.05, font=dict(size=10)),
+            height=460, margin=dict(l=70, r=20, t=10, b=70), # Fixed overlapping labels
+        )
+        st.plotly_chart(fig_scale, use_container_width=True, theme=None)
 
-    fig_scale.add_trace(go.Scatter(
-        x=eps_arr, y=M_q, mode='lines',
-        name='Quantum O(ε⁻¹)', line=dict(color=CQNT, width=2.5)
-    ), row=1, col=1)
+    # ------------------------------------------------------------------
+    # RIGHT COLUMN: CONVERGENCE RATES AND SIMULATION FEASIBILITY
+    # ------------------------------------------------------------------
+    with col_conv:
+        st.markdown("#### Error Convergence & Simulated Feasibility")
+        st.write("This plot visualizes Error vs. Resources. The 'O(1/M)' Quantum curve approaches absolute zero significantly faster than the Classical 'O(1/√N)' curve.")
+        
+        # Mathematically anchor the convergence constants
+        c0 = eps_used * np.sqrt(mc_equiv)
+        q0 = eps_used * queries
 
-    fig_scale.add_vline(
-        x=eps_used, line=dict(color=CACC, width=1.5, dash='dot'),
-        annotation=dict(text=f"Current ε", font=dict(color=CACC), y=0.9)
-    )
+        # Define an extended effort sweep range
+        N_ext = np.logspace(np.log10(max(mc_equiv/100, 10)), np.log10(mc_equiv*100), 200)
+        M_ext = np.logspace(np.log10(max(queries/10, 2)), np.log10(queries*100), 200)
+        
+        # Classical ε ∝ N⁻¹/²
+        fig_conv = go.Figure()
+        fig_conv.add_trace(go.Scatter(x=N_ext, y=c0 / np.sqrt(N_ext), mode='lines', name='Classical ε ∝ N⁻¹/²', line=dict(color=CAMB, width=2)))
+        # Quantum ε ∝ M⁻¹
+        fig_conv.add_trace(go.Scatter(x=M_ext, y=q0 / M_ext, mode='lines', name='Quantum ε ∝ M⁻¹', line=dict(color=CQNT, width=2.5)))
 
-    # ---------------- RIGHT PANEL ----------------
-    fig_scale.add_trace(go.Scatter(
-        x=eps_arr, y=speedup_theory, mode='lines',
-        name='Theoretical Speedup', line=dict(color=CGRN, width=2.5),
-        fill='tozeroy', fillcolor='rgba(52,211,153,0.05)'
-    ), row=1, col=2)
+        # Actual data point anchors
+        fig_conv.add_trace(go.Scatter(x=[mc_equiv], y=[eps_used], mode='markers', name='MC Equivalent Point', marker=dict(size=10, color=CAMB, symbol='circle')))
+        fig_conv.add_trace(go.Scatter(x=[queries], y=[eps_used], mode='markers', name='IQAE Queries Point', marker=dict(size=12, color=CQNT, symbol='star')))
 
-    fig_scale.add_trace(go.Scatter(
-        x=[eps_used], y=[speedup_actual], mode='markers+text',
-        marker=dict(size=14, color=CACC, symbol='diamond'),
-        text=[f"{speedup_actual:,.0f}×"], textposition="top left",
-        name='Actual Speedup'
-    ), row=1, col=2)
+        # --- Dynamic Feasibility Horizon (Reality Check Overlay) ---
+        # Modeling where simulated circuit depth becomes physically problematic
+        G_bits = max(R["qiskit_grid_bits"], 3)
+        # Empirical guess: Complexity increases exponentially with marked states (Collision Prob)
+        pc_factor = max(R["pc_mc"] * 1e4, 0.5) 
+        feasible_query_limit = int((2**(G_bits * 1.8)) / pc_factor)
+        feasible_query_limit = max(feasible_query_limit, queries * 1.5)
+        feasible_query_limit = min(feasible_query_limit, queries * 100) # Cap it
 
-    # Axis formatting
-    fig_scale.update_xaxes(
-        type='log', autorange='reversed', showgrid=True, gridcolor=BDR, color=CMUT,
-        title_text='Target ε', title_font=dict(color=CMUT), title_standoff=15,
-        row=1, col=1
-    )
-    fig_scale.update_xaxes(
-        type='log', autorange='reversed', showgrid=True, gridcolor=BDR, color=CMUT,
-        title_text='Target ε', title_standoff=15,
-        row=1, col=2
-    )
-    fig_scale.update_yaxes(type='log', showgrid=True, gridcolor=BDR, color=CMUT, title_standoff=15)
+        max_resources = max(N_ext.max(), M_ext.max())
+        
+        fig_conv.add_vrect(
+            x0=feasible_query_limit, x1=max_resources,
+            fillcolor=CRED, opacity=0.08, line_width=0,
+            annotation=dict(text="Complexity Wall: Simulation may not converge", font=dict(color=CRED, size=11, family='monospace'), textangle=-90, yanchor='top', y=0.95),
+            name="Simulated Feasibility Horizon"
+        )
+        # Marker on the feasibility horizon line
+        fig_conv.add_vline(x=feasible_query_limit, line=dict(color=CRED, width=2, dash='dash'), showlegend=False)
 
-    fig_scale.update_layout(
-        plot_bgcolor=PANEL, paper_bgcolor=DARK,
-        font=dict(color=CTXT, family='monospace'),
-        legend=dict(
-            bgcolor=CARD, bordercolor=BDR,
-            orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5 # FIX: Move legend below plots
-        ),
-        height=500,
-        margin=dict(l=70, r=20, t=60, b=80), # FIX: Massive margin increase prevents cut-off text!
-    )
-    st.plotly_chart(fig_scale, use_container_width=True, theme=None)
-
-
-    
-    st.divider()
-    st.markdown("#### Error vs Computational Effort (Convergence Rates)")
-
-    # Mathematically anchor the convergence constants to the actual physics simulation!
-    c0 = eps_used * np.sqrt(mc_equiv)
-    q0 = eps_used * queries
-
-    N_ext = np.logspace(np.log10(max(mc_equiv/100, 10)), np.log10(mc_equiv*100), 200)
-    err_c = c0 / np.sqrt(N_ext)
-
-    M_ext = np.logspace(np.log10(max(queries/10, 2)), np.log10(queries*100), 200)
-    err_q = q0 / M_ext
-
-    fig_conv = go.Figure()
-
-    fig_conv.add_trace(go.Scatter(
-        x=N_ext, y=err_c, mode='lines',
-        name='Classical ε ∝ N⁻¹/²', line=dict(color=CAMB, width=2.5)
-    ))
-
-    fig_conv.add_trace(go.Scatter(
-        x=M_ext, y=err_q, mode='lines',
-        name='Quantum ε ∝ M⁻¹', line=dict(color=CQNT, width=2.5)
-    ))
-    
-    # Plot the exact data point where they achieved target precision
-    fig_conv.add_trace(go.Scatter(
-        x=[mc_equiv], y=[eps_used], mode='markers',
-        name='MC Equivalent', marker=dict(size=10, color=CAMB, symbol='circle')
-    ))
-    fig_conv.add_trace(go.Scatter(
-        x=[queries], y=[eps_used], mode='markers',
-        name='IQAE Queries', marker=dict(size=12, color=CQNT, symbol='star')
-    ))
-
-    # Advantage region
-    M_common = np.logspace(np.log10(max(queries/10, 2)), np.log10(mc_equiv*100), 200)
-    err_qc = q0 / M_common
-    err_cc = c0 / np.sqrt(M_common)
-
-    fig_conv.add_trace(go.Scatter(
-        x=np.concatenate([M_common, M_common[::-1]]),
-        y=np.concatenate([err_qc, err_cc[::-1]]),
-        fill='toself', fillcolor='rgba(56,189,248,0.07)', line=dict(color='rgba(0,0,0,0)'),
-        name='Quantum advantage zone'
-    ))
-
-    fig_conv.update_layout(
-        xaxis=dict(
-            type='log', title='Computational Effort (N or M)', title_standoff=15,
-            showgrid=True, gridcolor=BDR, color=CMUT
-        ),
-        yaxis=dict(
-            type='log', title='Absolute Error ε', title_standoff=15,
-            showgrid=True, gridcolor=BDR, color=CMUT
-        ),
-        plot_bgcolor=PANEL, paper_bgcolor=DARK,
-        font=dict(color=CTXT, family='monospace'),
-        legend=dict(bgcolor=CARD, bordercolor=BDR, x=0.75, y=0.95),
-        height=450,
-        margin=dict(l=70, r=20, t=40, b=70), # FIX: Increased bottom/left margins
-    )
-
-    st.plotly_chart(fig_conv, use_container_width=True, theme=None)
+        fig_conv.update_layout(
+            xaxis=dict(type='log', title='Computational Effort (Samples N or Queries M)', showgrid=True, gridcolor=BDR, color=CMUT, title_standoff=15),
+            yaxis=dict(type='log', title='Target Error Margin (ε)', showgrid=True, gridcolor=BDR, color=CMUT, title_standoff=15),
+            plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
+            legend=dict(bgcolor=CARD, bordercolor=BDR, x=0.05, y=0.05, font=dict(size=10)),
+            height=460, margin=dict(l=70, r=20, t=10, b=70), # Fixed margins
+        )
+        st.plotly_chart(fig_conv, use_container_width=True, theme=None)
 
 with tabs[4]:
     st.markdown("### 🎛 Quantum Circuit Diagnostics")
