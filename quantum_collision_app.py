@@ -1103,6 +1103,9 @@ with tabs[3]:
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — CIRCUIT DIAGNOSTICS & IQAE TELEMETRY
 # ══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 4 — CIRCUIT DIAGNOSTICS & IQAE TELEMETRY
+# ══════════════════════════════════════════════════════════════════════════════
 with tabs[4]: 
     st.markdown("### 🔬 Quantum Hardware Diagnostics & Algorithmic Flow")
     st.write("Extracting concrete telemetry directly from the compiled Qiskit `QuantumCircuit` object.")
@@ -1110,7 +1113,7 @@ with tabs[4]:
     # --- EXTRACT CONCRETE DATA FROM THE ACTUAL CIRCUIT ---
     # NOTE: Ensure your backend `def_iqae` saves the circuit to `qres["circuit"]`
     if "circuit" in qres:
-        qc = qres["circuit"]
+        qc = qres["qc"]
         total_qubits = qc.num_qubits
         depth = qc.depth()
         
