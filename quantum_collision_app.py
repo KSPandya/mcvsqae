@@ -956,7 +956,7 @@ with tabs[3]:
     st.markdown("### 📈 Scaling & Computational Complexity Analysis")
     st.write("This section breaks down the specific algorithmic cost. It bridges theoretical complexity (Big O) with the actual resources used in this specific simulation run.")
 
-    # ------------------------------------------------------------------
+   # ------------------------------------------------------------------
     # ROW 1: DYNAMIC SCALING GAUGE METRICS (Anchored to actual run)
     # ------------------------------------------------------------------
     # We create the 'Effective Constants' (c0 and q0) so the asymptotic 
@@ -979,7 +979,8 @@ with tabs[3]:
             value = mc_equiv,
             number = {'font': {'color': CAMB, 'size':35}},
             gauge = {
-                'axis': {'range': [1000, max_c_gauge], 'type': 'log', 'tickfont': {'color': CMUT}},
+                # FIX: Removed 'type': 'log' which causes ValueError in Plotly Indicators
+                'axis': {'range': [0, max_c_gauge], 'tickfont': {'color': CMUT}},
                 'bar': {'color': CAMB},
                 'bgcolor': PANEL, 'borderwidth': 2, 'bordercolor': BDR,
                 'threshold': {'line': {'color': CRED, 'width': 4}, 'thickness': 0.75, 'value': mc_equiv}
@@ -996,7 +997,8 @@ with tabs[3]:
             value = queries,
             number = {'font': {'color': CQNT, 'size':35}},
             gauge = {
-                'axis': {'range': [10, max_q_gauge], 'type': 'log', 'tickfont': {'color': CMUT}},
+                # FIX: Removed 'type': 'log'
+                'axis': {'range': [0, max_q_gauge], 'tickfont': {'color': CMUT}},
                 'bar': {'color': CQNT},
                 'bgcolor': PANEL, 'borderwidth': 2, 'bordercolor': BDR,
                 'threshold': {'line': {'color': CRED, 'width': 4}, 'thickness': 0.75, 'value': queries}
@@ -1015,7 +1017,8 @@ with tabs[3]:
             value = speedup,
             number = {'suffix': "×", 'font': {'color': CGRN, 'size':35}},
             gauge = {
-                'axis': {'range': [1, max_s_gauge], 'type': 'log', 'tickfont': {'color': CMUT}},
+                # FIX: Removed 'type': 'log'
+                'axis': {'range': [0, max_s_gauge], 'tickfont': {'color': CMUT}},
                 'bar': {'color': CGRN},
                 'bgcolor': PANEL, 'borderwidth': 2, 'bordercolor': BDR,
                 'threshold': {'line': {'color': CRED, 'width': 4}, 'thickness': 0.75, 'value': speedup}
@@ -1024,8 +1027,6 @@ with tabs[3]:
         ))
         fig_gauge_s.update_layout(paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'), height=240, margin=dict(l=30, r=30, t=10, b=10))
         st.plotly_chart(fig_gauge_s, use_container_width=True, theme=None)
-
-    st.divider()
 
     # ------------------------------------------------------------------
     # ROW 2: SIDE-BY-SIDE RESOURCE vs PRECISION TRADEOFF
