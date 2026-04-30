@@ -1441,3 +1441,47 @@ with tabs[5]:
     fig_dec.update_layout(xaxis=dict(visible=False, range=[0, 10]), yaxis=dict(visible=False, range=[0, 5]),
                          plot_bgcolor=DARK, paper_bgcolor=DARK, height=250, margin=dict(l=0, r=0, t=0, b=0))
     st.plotly_chart(fig_dec, use_container_width=True, theme=None)
+    st.divider()
+    
+
+    st.markdown("#### 🔍 Technical Audit & Convergence Ledger")
+    st.write("Full parameter set and quantum-classical comparison data for verification.")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**🛰️ Encounter Geometry & Grid**")
+        rows = [
+            ("Object 1 (Asset)",    R["obj1"]),
+            ("Object 2 (Threat)",   R["obj2"]),
+            ("Miss Distance",       f"{np.sqrt(R['mu_r']**2 + R['mu_s']**2):.2f} m"),
+            ("Combined HBR (R)",    f"{R['R_hbr']:.1f} m"),
+            ("σ Radial",            f"{R['sig_r']:.1f} m"),
+            ("σ Along-track",       f"{R['sig_s']:.1f} m"),
+            ("Grid Resolution",     f"{qres['grid']}×{qres['grid']}"),
+            ("Collision Cells",     f"{qres['marked']} / {qres['grid']**2}"),
+        ]
+        import pandas as pd
+        st.dataframe(pd.DataFrame(rows, columns=["Parameter", "Value"]),
+                     use_container_width=True, hide_index=True)
+
+    with col2:
+        st.markdown("**⚛️ Quantum Algorithm Performance**")
+        # Ensure pc_final is clean for display
+        try: pc_q = float(qres["pc"])
+        except: pc_q = float(qres["pc"][0])
+            
+        rows_q = [
+            ("Pc (Quantum IQAE)",     f"{pc_q:.6e}"),
+            ("Pc (Classical MC)",     f"{R['pc_mc']:.6e}"),
+            ("Pc (Discrete Truth)",   f"{qres['pc_disc']:.6e}"),
+            ("IQAE 95% CI",           f"[{qres['ci'][0]:.3e}, {qres['ci'][1]:.3e}]"),
+            ("Oracle Queries (M)",    f"{qres['queries']:,}"),
+            ("Classical Equiv (N)",   f"{R['mc_equiv']:,}"),
+            ("Quantum Speedup",       f"{R['speedup']:,.0f}×"),
+            ("Target ε (Precision)",  f"{R['epsilon']}"),
+            ("Confidence (1-α)",      f"{R['alpha_ci']}%"),
+            ("Circuit Depth",         f"{qres['depth']:,}"),
+        ]
+        st.dataframe(pd.DataFrame(rows_q, columns=["Metric", "Value"]),
+                     use_container_width=True, hide_index=True)
