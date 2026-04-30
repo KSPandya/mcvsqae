@@ -1103,57 +1103,106 @@ with tabs[3]:
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — CIRCUIT DIAGNOSTICS & IQAE TELEMETRY
 # ══════════════════════════════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — CIRCUIT DIAGNOSTICS & IQAE TELEMETRY
-# ══════════════════════════════════════════════════════════════════════════════
 with tabs[4]: 
     st.markdown("### 🔬 Quantum Hardware Diagnostics & Algorithmic Flow")
     st.write("Extracting concrete telemetry directly from the compiled Qiskit `QuantumCircuit` object.")
 
-    # --- EXTRACT CONCRETE DATA FROM THE ACTUAL CIRCUIT ---
-    # NOTE: Ensure your backend `def_iqae` saves the circuit to `qres["circuit"]`
-    if "circuit" in qres:
-        qc = qres["circuit"]
-        total_qubits = qc.num_qubits
-        depth = qc.depth()
-        
-        # Count operations to get a concrete entanglement cost
-        ops = qc.count_ops()
-        # Rough translation of multi-controlled gates into CNOT equivalence
-        cnots = ops.get('cx', 0) + ops.get('ccx', 0)*6 + ops.get('mcx', 0)*12 
-        
-        queries = qres.get('queries', 0)
-    else:
-        st.error("⚠️ Circuit object not found. Please ensure `def_iqae` returns the `QuantumCircuit` as `qres['circuit']`.")
-        total_qubits, depth, cnots, queries, qc = 0, 0, 0, 0, None
-
-    # ------------------------------------------------------------------
-    # ROW 1: CONCRETE HARDWARE TELEMETRY
-    # ------------------------------------------------------------------
+    # 1. HARDWARE & GRID METRICS (TWO ROWS)
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Concrete Qubits Used", f"{total_qubits}")
-    c2.metric("Exact Circuit Depth", f"{depth:,}")
-    c3.metric("Entanglement Cost (CNOTs)", f"{cnots:,}")
-    c4.metric("Total Oracle Calls (M)", f"{queries}")
+    c1.metric("Circuit Depth",    qres["depth"])
+    c2.metric("System Qubits",    R["q_dim"]*2)
+    c3.metric("Total Qubits",     R["q_dim"]*2 + 1)
+    c4.metric("Oracle Queries",   qres["queries"])
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Grid Cells",       f"{qres['grid']}×{qres['grid']}")
+    c2.metric("Marked Cells",     qres["marked"])
+    c3.metric("Marking Rate",     f"{qres['marked']/qres['grid']**2*100:.1f}%")
+    c4.metric("Target ε",         R["epsilon"])
 
     st.divider()
 
-    # ------------------------------------------------------------------
-    # ROW 2: FULL-WIDTH CONCRETE CIRCUIT DIAGRAM
-    # ------------------------------------------------------------------
-    st.markdown("#### 🖧 Compiled Circuit Architecture")
-    if qc is not None:
-        with st.spinner("Rendering quantum circuit..."):
+    # 2. PROJECTION & ORACLE BREAKDOWN
+    col_l, col_r = st.columns(2)
+    with col_l:
+        st.markdown("**Circuit Depth vs Precision (projected)**")
+        eps_range  = np.array([0.05, 0.02, 0.01, 0.005, 0.002])
+        # Logarithmic projection of depth requirements
+        dep_proj   = (qres["depth"] * np.log(0.01) / np.log(eps_range)).astype(int)
+        dep_proj   = np.abs(dep_proj)
+        
+        fig_dep    = go.Figure()
+        fig_dep.add_trace(go.Scatter(
+            x=eps_range, y=dep_proj, mode='lines+markers',
+            line=dict(color=CACC, width=2.5),
+            marker=dict(size=9, color=CACC, symbol='diamond')))
+        fig_dep.add_vline(x=R["epsilon"],
+                          line=dict(color=CQNT, width=1.5, dash='dot'),
+                          annotation=dict(text="Current ε", font=dict(color=CQNT)))
+        fig_dep.update_layout(
+            xaxis=dict(autorange='reversed', title='Target ε', showgrid=True, gridcolor=BDR, color=CMUT),
+            yaxis=dict(title='Est. Circuit Depth', showgrid=True, gridcolor=BDR, color=CMUT),
+            plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
+            height=310, margin=dict(l=10, r=10, t=20, b=10), showlegend=False,
+        )
+        st.plotly_chart(fig_dep, use_container_width=True, theme=None)
+
+    with col_r:
+        st.markdown("**Oracle Query Breakdown**")
+        labels = ["Marked (collision)", "Unmarked (safe)"]
+        values = [qres["marked"], qres["grid"]**2 - qres["marked"]]
+        fig_pie = go.Figure(go.Pie(
+            labels=labels, values=values, hole=0.52,
+            marker=dict(colors=[CRED, CQNT], line=dict(color=DARK, width=2)),
+            textfont=dict(color=CTXT, size=10)
+        ))
+        fig_pie.update_layout(
+            paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
+            legend=dict(bgcolor=CARD, bordercolor=BDR),
+            height=310, margin=dict(l=10, r=10, t=20, b=10),
+            annotations=[dict(text=f"{qres['marked']}", x=0.5, y=0.5,
+                              font=dict(size=22, color=CRED), showarrow=False)]
+        )
+        st.plotly_chart(fig_pie, use_container_width=True, theme=None)
+
+    st.divider()
+
+    # 3. AMPLITUDE DISTRIBUTION
+    st.markdown("**Probability Amplitude Distribution (quantum state |ψ⟩)**")
+    flat_pdf = qres["pdf"].flatten()
+    top_k    = 64
+    idx_sort = np.argsort(flat_pdf)[::-1][:top_k]
+    fig_amp  = go.Figure(go.Bar(
+        x=list(range(top_k)), y=np.sqrt(flat_pdf[idx_sort]),
+        marker=dict(
+            color=np.sqrt(flat_pdf[idx_sort]),
+            colorscale=[[0, CQNT],[0.5, CACC],[1, CAMB]],
+            showscale=False),
+        name='Amplitude'))
+    fig_amp.update_layout(
+        xaxis=dict(title=f'Top {top_k} basis state index (sorted)', showgrid=False, color=CMUT),
+        yaxis=dict(title='Amplitude √pdf', showgrid=True, gridcolor=BDR, color=CMUT),
+        plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
+        height=280, margin=dict(l=10, r=10, t=20, b=10), showlegend=False,
+    )
+    st.plotly_chart(fig_amp, use_container_width=True, theme=None)
+
+    st.divider()
+
+    # 4. CONCRETE CIRCUIT DRAWING
+    st.markdown("#### 🖧 Compiled Concrete Circuit Architecture")
+    if "circuit" in qres:
+        with st.spinner("Rendering concrete circuit..."):
             try:
-                # Use Qiskit's native Matplotlib drawer for scientific accuracy
-                # fold=-1 attempts to draw it in one continuous horizontal row
-                fig_circ = qc.draw(output='mpl', style='clifford', fold=-1)
-                st.pyplot(fig_circ)
-            except Exception as e:
-                st.warning("Matplotlib drawer failed. Ensure `qiskit[visualization]` is in your requirements.txt. Falling back to ASCII:")
-                st.text(qc.draw(output='text'))
+                import matplotlib.pyplot as plt
+                fig_c = qres["circuit"].draw(output='mpl', style='clifford', fold=-1, scale=0.7)
+                st.pyplot(fig_c)
+                plt.close(fig_c)
+            except:
+                st.text(qres["circuit"].draw(output='text'))
     
     st.divider()
+
 
     # ------------------------------------------------------------------
     # ROW 3: IQAE FLOWCHART & ANIMATION (Side-by-Side)
