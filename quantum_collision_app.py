@@ -818,12 +818,7 @@ with tabs[1]:
         )
         st.plotly_chart(fig_anim, use_container_width=True, theme=None)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — QUANTUM vs CLASSICAL (Upgraded Analytics)
-# ══════════════════════════════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — QUANTUM vs CLASSICAL (Upgraded Analytics)
-# ══════════════════════════════════════════════════════════════════════════════
+
 with tabs[2]:
     st.markdown("### ⚛ Quantum vs Classical Comparison")
 
@@ -1104,80 +1099,57 @@ with tabs[3]:
         )
         st.plotly_chart(fig_conv, use_container_width=True, theme=None)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — CIRCUIT DIAGNOSTICS & IQAE ANIMATION
-# ══════════════════════════════════════════════════════════════════════════════
+
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — CIRCUIT DIAGNOSTICS & IQAE TELEMETRY
 # ══════════════════════════════════════════════════════════════════════════════
 with tabs[4]: 
     st.markdown("### 🔬 Quantum Hardware Diagnostics & Algorithmic Flow")
-    st.write("Deep dive into the transpiled circuit architecture and the Iterative Quantum Amplitude Estimation (IQAE) convergence loop.")
+    st.write("Extracting concrete telemetry directly from the compiled Qiskit `QuantumCircuit` object.")
+
+    # --- EXTRACT CONCRETE DATA FROM THE ACTUAL CIRCUIT ---
+    # NOTE: Ensure your backend `def_iqae` saves the circuit to `qres["circuit"]`
+    if "circuit" in qres:
+        qc = qres["circuit"]
+        total_qubits = qc.num_qubits
+        depth = qc.depth()
+        
+        # Count operations to get a concrete entanglement cost
+        ops = qc.count_ops()
+        # Rough translation of multi-controlled gates into CNOT equivalence
+        cnots = ops.get('cx', 0) + ops.get('ccx', 0)*6 + ops.get('mcx', 0)*12 
+        
+        queries = qres.get('queries', 0)
+    else:
+        st.error("⚠️ Circuit object not found. Please ensure `def_iqae` returns the `QuantumCircuit` as `qres['circuit']`.")
+        total_qubits, depth, cnots, queries, qc = 0, 0, 0, 0, None
 
     # ------------------------------------------------------------------
-    # ROW 1: HARDWARE TELEMETRY METRICS
+    # ROW 1: CONCRETE HARDWARE TELEMETRY
     # ------------------------------------------------------------------
-    grid_size = qres.get("grid", 16)
-    state_qubits = max(int(np.log2(grid_size)) * 3, 3) 
-    total_qubits = state_qubits + 1 # +1 for the Objective/Flag Ancilla
-
-    est_depth = total_qubits * 145 
-    est_cnots = total_qubits * 65
-
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Logical Qubits", f"{total_qubits}")
-    c2.metric("Circuit Depth (Est.)", f"{est_depth:,}")
-    c3.metric("Entanglement (CNOTs)", f"{est_cnots:,}")
-    c4.metric("Total Oracle Calls (M)", f"{qres['queries']}")
+    c1.metric("Concrete Qubits Used", f"{total_qubits}")
+    c2.metric("Exact Circuit Depth", f"{depth:,}")
+    c3.metric("Entanglement Cost (CNOTs)", f"{cnots:,}")
+    c4.metric("Total Oracle Calls (M)", f"{queries}")
 
     st.divider()
 
     # ------------------------------------------------------------------
-    # ROW 2: FULL-WIDTH CIRCUIT DIAGRAM
+    # ROW 2: FULL-WIDTH CONCRETE CIRCUIT DIAGRAM
     # ------------------------------------------------------------------
-    st.markdown("#### 🖧 Logical Circuit Architecture (Full Pipeline)")
-    st.write("High-level schematic of the State Preparation ($\mathcal{A}$) and sequential Grover Operators ($\mathcal{Q}$).")
+    st.markdown("#### 🖧 Compiled Circuit Architecture")
+    if qc is not None:
+        with st.spinner("Rendering quantum circuit..."):
+            try:
+                # Use Qiskit's native Matplotlib drawer for scientific accuracy
+                # fold=-1 attempts to draw it in one continuous horizontal row
+                fig_circ = qc.draw(output='mpl', style='clifford', fold=-1)
+                st.pyplot(fig_circ)
+            except Exception as e:
+                st.warning("Matplotlib drawer failed. Ensure `qiskit[visualization]` is in your requirements.txt. Falling back to ASCII:")
+                st.text(qc.draw(output='text'))
     
-    fig_circ = go.Figure()
-
-    # Wire definitions (Y-coordinates)
-    wires = {"State Register |ψ⟩": 2, "Ancilla |0⟩": 0.5}
-    
-    # Draw Wires across the full width
-    for name, y in wires.items():
-        fig_circ.add_trace(go.Scatter(x=[-0.5, 12], y=[y, y], mode='lines', line=dict(color=CMUT, width=2), hoverinfo='skip', showlegend=False))
-        fig_circ.add_annotation(x=-1.5, y=y, text=name, showarrow=False, font=dict(color=CTXT, size=14), xanchor="left")
-
-    # Helper to draw multi-qubit gates
-    def draw_gate(fig, x0, x1, y0, y1, text, color, font_size=16):
-        fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color=BDR, width=2), fillcolor=color)
-        fig.add_annotation(x=(x0+x1)/2, y=(y0+y1)/2, text=text, showarrow=False, font=dict(color=DARK, size=font_size, family="Arial Black"))
-
-    # 1. Hadamard Initialization
-    draw_gate(fig_circ, 0, 1, -0.5, 3, "H", CACC, 20)
-    
-    # 2. State Preparation A
-    draw_gate(fig_circ, 1.5, 3.5, -0.5, 3, "State Prep (𝒜)", CQNT)
-    
-    # 3. Grover Sequence (Q^k)
-    draw_gate(fig_circ, 4.5, 6, -0.5, 3, "Grover (𝒬)", CAMB)
-    draw_gate(fig_circ, 6.5, 8, -0.5, 3, "Grover (𝒬)", CAMB)
-    fig_circ.add_annotation(x=9, y=1.25, text=". . .", showarrow=False, font=dict(color=CMUT, size=40))
-    draw_gate(fig_circ, 10, 11.5, -0.5, 3, "Grover (𝒬)", CAMB)
-
-    # 4. Measurement
-    fig_circ.add_shape(type="rect", x0=11.7, x1=12.5, y0=0.1, y1=0.9, line=dict(color=BDR, width=2), fillcolor=CARD)
-    fig_circ.add_trace(go.Scatter(x=[11.9, 12.1, 12.3], y=[0.4, 0.7, 0.4], mode='lines', line=dict(color=CMUT, width=1.5), hoverinfo='skip', showlegend=False))
-    fig_circ.add_annotation(x=12.1, y=1.2, text="Measure", showarrow=False, font=dict(color=CMUT, size=12))
-
-    fig_circ.update_layout(
-        xaxis=dict(range=[-2, 13], showgrid=False, zeroline=False, visible=False),
-        yaxis=dict(range=[-1, 3.5], showgrid=False, zeroline=False, visible=False),
-        plot_bgcolor=PANEL, paper_bgcolor=DARK,
-        height=250, margin=dict(l=10, r=10, t=10, b=10)
-    )
-    st.plotly_chart(fig_circ, use_container_width=True, theme=None)
-
     st.divider()
 
     # ------------------------------------------------------------------
@@ -1192,43 +1164,36 @@ with tabs[4]:
         
         fig_flow = go.Figure()
 
-        # Helper to draw flowchart nodes
         def draw_node(fig, x, y, text, color, width=3):
-            fig.add_shape(type="rect", x0=x-width/2, x1=x+width/2, y0=y-0.4, y1=y+0.4, 
-                          line=dict(color=color, width=2), fillcolor=PANEL)
+            fig.add_shape(type="rect", x0=x-width/2, x1=x+width/2, y0=y-0.4, y1=y+0.4, line=dict(color=color, width=2), fillcolor=PANEL)
             fig.add_annotation(x=x, y=y, text=text, showarrow=False, font=dict(color=CTXT, size=12))
 
-        # Helper to draw arrows
         def draw_arrow(fig, x0, y0, x1, y1):
-            fig.add_annotation(x=x1, y=y1, ax=x0, ay=y0, xref="x", yref="y", axref="x", ayref="y",
-                               showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=2, arrowcolor=CMUT)
+            fig.add_annotation(x=x1, y=y1, ax=x0, ay=y0, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=2, arrowcolor=CMUT)
 
-        # Draw Nodes
         draw_node(fig_flow, 5, 5, "<b>1. Quantum Init:</b><br>Define max target error (ε)", CACC)
         draw_node(fig_flow, 5, 3.5, "<b>2. Quantum Execution:</b><br>Run Circuit (𝒜 + 𝒬ᵏ)<br>Measure Ancilla", CQNT)
         draw_node(fig_flow, 5, 2, "<b>3. Classical Update:</b><br>Adjust Confidence Interval<br>[θ_lower, θ_upper]", CAMB)
         draw_node(fig_flow, 5, 0.5, "<b>4. Precision Check:</b><br>Is (θ_u - θ_l) < ε?", CRED)
         draw_node(fig_flow, 2, 0.5, "<b>5. Return:</b><br>Final Probability (Pc)", CGRN, width=2.5)
 
-        # Draw Arrows
         draw_arrow(fig_flow, 5, 4.6, 5, 3.9)
         draw_arrow(fig_flow, 5, 3.1, 5, 2.4)
         draw_arrow(fig_flow, 5, 1.6, 5, 0.9)
         
-        # Loop back arrow (No -> Step 2)
+        # Loop back arrow
         fig_flow.add_trace(go.Scatter(x=[6.5, 7.5, 7.5, 6.5], y=[0.5, 0.5, 3.5, 3.5], mode='lines', line=dict(color=CMUT, width=2)))
         fig_flow.add_annotation(x=6.5, y=3.5, ax=6.8, ay=3.5, showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=2, arrowcolor=CMUT)
         fig_flow.add_annotation(x=7.5, y=2, text="No (Increase k)", showarrow=False, textangle=90, font=dict(color=CMUT, size=11), xshift=15)
 
-        # Exit arrow (Yes -> Step 5)
+        # Exit arrow
         draw_arrow(fig_flow, 3.5, 0.5, 3.2, 0.5)
         fig_flow.add_annotation(x=3.35, y=0.5, text="Yes", showarrow=False, font=dict(color=CMUT, size=11), yshift=15)
 
         fig_flow.update_layout(
             xaxis=dict(range=[0, 8.5], showgrid=False, zeroline=False, visible=False),
             yaxis=dict(range=[0, 5.5], showgrid=False, zeroline=False, visible=False),
-            plot_bgcolor=DARK, paper_bgcolor=DARK,
-            height=380, margin=dict(l=0, r=0, t=10, b=10)
+            plot_bgcolor=DARK, paper_bgcolor=DARK, height=380, margin=dict(l=0, r=0, t=10, b=10)
         )
         st.plotly_chart(fig_flow, use_container_width=True, theme=None)
 
@@ -1241,7 +1206,7 @@ with tabs[4]:
         pc_true = qres["pc"]
         
         m_arr = [int(2**(i*0.8)) for i in range(1, iters+1)] 
-        base_error = pc_true * 1.5 
+        base_error = max(pc_true * 1.5, 1e-5)
         err_arr = [base_error / (m * 0.5) for m in m_arr]
         
         np.random.seed(42)
@@ -1287,7 +1252,6 @@ with tabs[4]:
             height=380, margin=dict(l=60, r=20, t=50, b=40)
         )
         st.plotly_chart(fig_anim, use_container_width=True, theme=None)
-
     
 
 with tabs[5]:
