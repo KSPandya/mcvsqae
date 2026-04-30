@@ -772,26 +772,34 @@ with tabs[1]:
             dist = np.sqrt((S2-S1)**2 + (R2-0)**2 + (W2-0)**2)
             is_tca = (abs(t) == min(np.abs(t_anim)))
             
-            # --- UPDATED LOGIC: Bridging Physics and Probability ---
+            # --- UPDATED LOGIC: Synchronized with Quantum COLA Protocol ---
             if is_tca:
-                # Fetch the actual mathematical probability calculated in the background
-                pc_risk = R["pc_mc"] 
+                # Use the converged Quantum Probability for the visual alert
+                try:
+                    pc_risk = float(qres["pc"])
+                except:
+                    pc_risk = float(qres["pc"][0])
                 
                 if dist <= R_hbr:
-                    # The actual center points collided
                     txt = f"<b>💥 DIRECT HIT! ({dist:.1f}m)</b>"
                     c = CRED
-                    marker_size = 18
+                    marker_size = 20
                 elif pc_risk > 1e-4:
-                    # The centers missed, but the uncertainty cloud is overlapping the asset!
-                    txt = f"<b>⚠️ HIGH RISK CLOUD! Center miss: {dist:.1f}m</b>"
-                    c = CAMB  # Amber/Orange warning
+                    txt = f"<b>🔴 CRITICAL RISK! Pc: {pc_risk:.2e}</b>"
+                    c = CRED
+                    marker_size = 18
+                elif pc_risk > 1e-5:
+                    txt = f"<b>🟡 ELEVATED RISK! Pc: {pc_risk:.2e}</b>"
+                    c = CAMB
                     marker_size = 16
-                else:
-                    # The centers missed AND the probability cloud is safely far away
-                    txt = f"<b>✅ CLEAR MISS ({dist:.1f}m)</b>"
-                    c = CGRN
+                elif pc_risk > 1e-6:
+                    txt = f"<b>🔵 MONITORING! Pc: {pc_risk:.2e}</b>"
+                    c = "#60A5FA" # Professional Blue
                     marker_size = 14
+                else:
+                    txt = f"<b>🟢 CLEAR MISS ({dist:.1f}m)</b>"
+                    c = CGRN
+                    marker_size = 12
                 
                 text_size = 22
             else:
@@ -803,12 +811,15 @@ with tabs[1]:
             frame_data = [
                 go.Scatter3d(x=[S1], y=[0], z=[0]), 
                 go.Surface(x=x_sph + S1, y=y_sph, z=z_sph), 
-                go.Scatter3d(x=[S2], y=[R2], z=[W2], marker=dict(size=marker_size, color=c), text=[txt], textfont=dict(color=c, size=text_size))
+                go.Scatter3d(x=[S2], y=[R2], z=[W2], 
+                             marker=dict(size=marker_size, color=c, opacity=0.8), 
+                             text=[txt], 
+                             textfont=dict(color=c, size=text_size))
             ]
 
             frames.append(go.Frame(data=frame_data, traces=[0, 1, 4], name=f"frame_{i}"))
 
-            # The 2-Second Cinematic Pause
+            # The Cinematic Pause at Closest Approach
             if is_tca:
                 for pause_idx in range(33):
                     frames.append(go.Frame(data=frame_data, traces=[0, 1, 4], name=f"frame_{i}_pause_{pause_idx}"))
@@ -833,10 +844,9 @@ with tabs[1]:
             plot_bgcolor=DARK, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
             margin=dict(l=0, r=0, t=10, b=0),
             legend=dict(bgcolor=DARK, bordercolor=BDR, yanchor="top", y=0.95, xanchor="right", x=0.95),
-            height=500
+            height=600 # Slightly taller for better 3D perspective
         )
         st.plotly_chart(fig_anim, use_container_width=True, theme=None)
-
 
 with tabs[2]:
     st.markdown("### ⚛ Quantum vs Classical Comparison")
