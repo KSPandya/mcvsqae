@@ -1143,7 +1143,7 @@ with tabs[4]:
             xaxis=dict(autorange='reversed', title='Target ε', showgrid=True, gridcolor=BDR, color=CMUT),
             yaxis=dict(title='Est. Circuit Depth', showgrid=True, gridcolor=BDR, color=CMUT),
             plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
-            height=310, margin=dict(l=10, r=10, t=20, b=10), showlegend=False,
+            height=340, margin=dict(l=50, r=50, t=50, b=50), showlegend=False,
         )
         st.plotly_chart(fig_dep, use_container_width=True, theme=None)
 
@@ -1159,7 +1159,7 @@ with tabs[4]:
         fig_pie.update_layout(
             paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
             legend=dict(bgcolor=CARD, bordercolor=BDR),
-            height=310, margin=dict(l=10, r=10, t=20, b=10),
+            height=340, margin=dict(l=50, r=50, t=50, b=50),
             annotations=[dict(text=f"{qres['marked']}", x=0.5, y=0.5,
                               font=dict(size=22, color=CRED), showarrow=False)]
         )
@@ -1183,7 +1183,7 @@ with tabs[4]:
         xaxis=dict(title=f'Top {top_k} basis state index (sorted)', showgrid=False, color=CMUT),
         yaxis=dict(title='Amplitude √pdf', showgrid=True, gridcolor=BDR, color=CMUT),
         plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
-        height=280, margin=dict(l=10, r=10, t=20, b=10), showlegend=False,
+        height=340, margin=dict(l=50, r=50, t=50, b=50), showlegend=False,
     )
     st.plotly_chart(fig_amp, use_container_width=True, theme=None)
 
