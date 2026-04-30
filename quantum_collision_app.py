@@ -56,23 +56,53 @@ st.markdown("""
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
 
-  /* global background */
-  html, body, [data-testid="stAppViewContainer"] { background: #050a14; }
+  /* Global Background & Base Text */
+  html, body, [data-testid="stAppViewContainer"] { 
+      background: #050a14; 
+      color: #f9fafb;
+  }
   [data-testid="stSidebar"]  { background: #0b1628 !important; }
   [data-testid="stHeader"]   { background: transparent !important; }
 
-  /* tabs */
-  .stTabs [data-baseweb="tab-list"]  { background: #0b1628; border-radius: 8px; padding: 4px; }
-  .stTabs [data-baseweb="tab"]       { color: #64748b; font-weight: 600; border-radius: 6px; }
-  .stTabs [aria-selected="true"]     { background: #1e3a5f !important; color: #38bdf8 !important; }
-
-  /* metric cards */
-  [data-testid="metric-container"] {
-    background: #0f1f38; border: 1px solid #1a3050;
-    border-radius: 10px; padding: .8rem 1rem;
+  /* --- HEADING CONTRASTS --- */
+  /* Main Headings (###) */
+  h3 {
+      color: #38bdf8 !items; /* Bright Sky Blue */
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+      border-left: 4px solid #38bdf8;
+      padding-left: 12px;
   }
 
-  /* sidebar labels */
+  /* Sub Headings (####) */
+  h4 {
+      color: #f9fafb; /* Pure White */
+      font-family: 'Space Mono', monospace;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.9;
+  }
+
+  /* Tabs Styling */
+  .stTabs [data-baseweb="tab-list"]  { background: #0b1628; border-radius: 8px; padding: 4px; }
+  .stTabs [data-baseweb="tab"]       { color: #94a3b8; font-weight: 600; border-radius: 6px; }
+  .stTabs [aria-selected="true"]     { background: #1e3a5f !important; color: #38bdf8 !important; }
+
+  /* Metric Cards Styling */
+  [data-testid="metric-container"] {
+    background: #0f1f38; 
+    border: 1px solid #1a3050;
+    border-radius: 10px; 
+    padding: .8rem 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  [data-testid="stMetricValue"] { color: #f9fafb !important; }
+  [data-testid="stMetricLabel"] { color: #38bdf8 !important; font-family: 'Space Mono', monospace; }
+
+  /* Sidebar Labels */
   .sidebar-label {
     font-family: 'Space Mono', monospace;
     font-size: .72rem; letter-spacing: .1em;
@@ -80,7 +110,7 @@ st.markdown("""
     margin: 1rem 0 .2rem;
   }
 
-  /* risk badge */
+  /* Risk Badges Styling */
   .risk-high   { background:#7f1d1d; color:#f87171; border:1px solid #f87171;
                  border-radius:8px; padding:.4rem 1rem; text-align:center;
                  font-weight:700; font-size:1.05rem; }
@@ -90,8 +120,12 @@ st.markdown("""
   .risk-low    { background:#052e16; color:#34d399; border:1px solid #34d399;
                  border-radius:8px; padding:.4rem 1rem; text-align:center;
                  font-weight:700; font-size:1.05rem; }
+  
   .speedup-box { background:#0f1f38; border:1px solid #a78bfa;
                  border-radius:10px; padding:1rem; text-align:center; }
+
+  /* Divider Styling */
+  hr { border-color: #1a3050 !important; }
 </style>
 """, unsafe_allow_html=True)
 
