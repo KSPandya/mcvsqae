@@ -821,6 +821,9 @@ with tabs[1]:
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — QUANTUM vs CLASSICAL (Upgraded Analytics)
 # ══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 2 — QUANTUM vs CLASSICAL (Upgraded Analytics)
+# ══════════════════════════════════════════════════════════════════════════════
 with tabs[2]:
     st.markdown("### ⚛ Quantum vs Classical Comparison")
 
@@ -841,6 +844,7 @@ with tabs[2]:
             marker=dict(color=colors, line=dict(color=BDR, width=1.5)),
             text=[f"{v:.4e}" for v in vals],
             textposition='outside', textfont=dict(color=CTXT, size=11),
+            cliponaxis=False, # FIX: Stops text from being cut off at the top
             error_y=dict(
                 type='data', symmetric=False,
                 array=[0, qres["ci"][1]-qres["pc"], 0],
@@ -850,16 +854,16 @@ with tabs[2]:
         fig_bar.update_layout(
             plot_bgcolor=PANEL, paper_bgcolor=DARK,
             font=dict(color=CTXT, family='monospace'),
-            yaxis=dict(title='Collision Probability (Pc)', showgrid=True, gridcolor=BDR, color=CMUT),
+            yaxis=dict(title='Collision Probability (Pc)', showgrid=True, gridcolor=BDR, color=CMUT, title_standoff=15),
             xaxis=dict(color=CMUT),
-            height=340, margin=dict(l=10, r=10, t=20, b=10),
+            height=340, 
+            margin=dict(l=60, r=20, t=40, b=40), # FIX: Increased margins
         )
         st.plotly_chart(fig_bar, use_container_width=True, theme=None)
 
     with col_r:
         st.markdown("**Computational Speedup Ratio**")
-        # Visual Gauge for Quantum Advantage
-        max_gauge = 10**(np.ceil(np.log10(R['speedup']) + 0.5)) # Dynamic scaling
+        max_gauge = 10**(np.ceil(np.log10(R['speedup']) + 0.5))
         
         fig_gauge = go.Figure(go.Indicator(
             mode = "gauge+number",
@@ -867,7 +871,8 @@ with tabs[2]:
             number = {'suffix': "×", 'font': {'size': 40, 'color': CQNT}},
             title = {'text': "Quantum Oracle Advantage", 'font': {'size': 14, 'color': CMUT}},
             gauge = {
-                'axis': {'range': [1, max_gauge], 'tickwidth': 1, 'tickcolor': CMUT, 'color': CMUT},
+                # FIX: Replaced 'color' with 'tickfont': {'color': CMUT}
+                'axis': {'range': [1, max_gauge], 'tickwidth': 1, 'tickcolor': CMUT, 'tickfont': {'color': CMUT}},
                 'bar': {'color': CQNT},
                 'bgcolor': PANEL,
                 'borderwidth': 2,
@@ -883,69 +888,62 @@ with tabs[2]:
         ))
         fig_gauge.update_layout(
             paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
-            height=340, margin=dict(l=20, r=20, t=40, b=20)
+            height=340, margin=dict(l=40, r=40, t=40, b=30)
         )
         st.plotly_chart(fig_gauge, use_container_width=True, theme=None)
 
     st.divider()
 
     # ------------------------------------------------------------------
-    # ROW 2: THE ERROR DISTRIBUTION LANDSCAPE (NEW)
+    # ROW 2: THE ERROR DISTRIBUTION LANDSCAPE
     # ------------------------------------------------------------------
     st.markdown("#### 🌊 Statistical Uncertainty Landscape")
     st.write("This visualizes the 'Probability Density' of the error margins. A wider, flatter curve means less certainty in the estimate.")
     
     from scipy.stats import norm
     
-    # 1. Classical Error Math (Standard Error of a binomial proportion)
     pc_mc = R["pc_mc"]
     n_mc = R["mc_N"]
-    # If pc is 0, add a tiny epsilon so the math doesn't divide by zero
     p_safe = max(pc_mc, 1e-12) 
     sigma_mc = np.sqrt((p_safe * (1 - p_safe)) / n_mc)
     
-    # 2. Quantum Error Math (Reverse engineered from the 95% CI bounds)
     pc_q = qres["pc"]
     ci_width = qres["ci"][1] - qres["ci"][0]
-    # 95% CI is roughly +/- 1.96 standard deviations
     sigma_q = max(ci_width / (2 * 1.96), 1e-13) 
     
-    # 3. Build the X-axis sweep centered on the quantum answer
     x_min = pc_q - (sigma_mc * 4)
     x_max = pc_q + (sigma_mc * 4)
     x_sweep = np.linspace(x_min, x_max, 500)
     
-    # Generate the Gaussian Bell Curves
     pdf_mc = norm.pdf(x_sweep, pc_mc, sigma_mc)
     pdf_q  = norm.pdf(x_sweep, pc_q, sigma_q)
     
     fig_dist = go.Figure()
 
-    # Classical Area
     fig_dist.add_trace(go.Scatter(
         x=x_sweep, y=pdf_mc, fill='tozeroy', mode='lines',
         line=dict(color=CAMB, width=2), fillcolor='rgba(245, 158, 11, 0.2)',
         name=f"Classical Error Profile (N={n_mc:,})"
     ))
 
-    # Quantum Area
     fig_dist.add_trace(go.Scatter(
         x=x_sweep, y=pdf_q, fill='tozeroy', mode='lines',
         line=dict(color=CQNT, width=2), fillcolor='rgba(34, 211, 238, 0.4)',
         name=f"Quantum Error Profile (M={qres['queries']})"
     ))
 
-    # Ground Truth Reference Line
     fig_dist.add_vline(x=qres["pc_disc"], line=dict(color=CACC, width=2, dash='dash'), 
                        annotation=dict(text="Discrete Truth", font=dict(color=CACC, size=12)))
 
     fig_dist.update_layout(
         plot_bgcolor=PANEL, paper_bgcolor=DARK,
         font=dict(color=CTXT, family='monospace'),
-        xaxis=dict(title='Calculated Probability of Collision (Pc)', showgrid=True, gridcolor=BDR, color=CMUT, tickformat='.2e'),
-        yaxis=dict(title='Confidence Density', showgrid=True, gridcolor=BDR, color=CMUT, showticklabels=False),
+        # FIX: Added title_standoff and expanded the bottom margin to stop overlapping
+        xaxis=dict(title='Calculated Probability of Collision (Pc)', showgrid=True, gridcolor=BDR, color=CMUT, tickformat='.2e', title_standoff=15),
+        yaxis=dict(title='Confidence Density', showgrid=True, gridcolor=BDR, color=CMUT, showticklabels=False, title_standoff=15),
         legend=dict(bgcolor=CARD, bordercolor=BDR, yanchor="top", y=0.95, xanchor="left", x=0.05),
-        height=400, margin=dict(l=10, r=10, t=20, b=10),
+        height=400, 
+        margin=dict(l=60, r=20, t=30, b=60), # FIX: Massive margin increase
     )
     
     st.plotly_chart(fig_dist, use_container_width=True, theme=None)
