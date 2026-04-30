@@ -511,7 +511,7 @@ with tabs[0]:
         comparison = {
             "Parameter":           ["Wall-clock Time", "Convergence Scaling", "Confidence Bounds", "State Preparation"],
             "Classical Pipeline":  [f"{R['t_mc']*1e3:.1f} ms", "O(1 / √N) — Slow", "Post-hoc statistical", "Continuous PDF"],
-            "Quantum Pipeline":    [f"{R['t_q']:.2f} s (Simulated)", "O(1 / M) — Quadratic", f"Native {R['alpha_ci']}% CI bounds", f"Pixelated ({qres['grid']}² states)"],
+            "Quantum Pipeline":    [f"{R['t_q']:.2f} s (Simulated)", "O(1 / M) — Fast (Quadratic Speedup)", f"Native {R['alpha_ci']}% CI bounds", f"Pixelated ({qres['grid']}² states)"],
         }
         import pandas as pd
         st.dataframe(pd.DataFrame(comparison), use_container_width=True, hide_index=True)
