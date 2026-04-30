@@ -1,5 +1,5 @@
 """
-═══════════════════════════════════════════════════════════════════════════
+
   QUANTUM COLLISION PROBABILITY  —  Streamlit Dashboard
   ─────────────────────────────────────────────────────────────────────────
   Run:  streamlit run quantum_collision_app.py
@@ -7,7 +7,7 @@
   Install:
     pip install streamlit sgp4 qiskit qiskit-aer qiskit-algorithms
                numpy scipy matplotlib plotly
-═══════════════════════════════════════════════════════════════════════════
+
 """
 
 import warnings
@@ -44,9 +44,6 @@ from qiskit.circuit.library import StatePreparation
 from qiskit.primitives import StatevectorSampler
 from qiskit_algorithms import EstimationProblem, IterativeAmplitudeEstimation
 
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  PAGE CONFIG                                                             ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
 st.set_page_config(
     page_title="Quantum Orbital Collision Estimator",
     page_icon="⚛",
@@ -54,7 +51,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Injected CSS ─────────────────────────────────────────────────────────────
+
 st.markdown("""
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
@@ -98,46 +95,21 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  COLOUR PALETTE (matplotlib)                                             ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
-# ─────────────────────────────────────────────────────────────
-# CORE DARK THEME (higher contrast)
-# ─────────────────────────────────────────────────────────────
-DARK  = "#020617"   # near-black (better contrast than blue-black)
-PANEL = "#0B1220"   # deep slate
-CARD  = "#111827"   # elevated panel
-BDR   = "#1F2A44"   # subtle but visible borders
 
-# ─────────────────────────────────────────────────────────────
-# PRIMARY SIGNAL COLORS (scientifically distinct)
-# ─────────────────────────────────────────────────────────────
-CAMB  = "#F59E0B"   # Classical → Amber (unchanged, already strong)
-CQNT  = "#22D3EE"   # Quantum → Bright Cyan (more luminous than before)
-CACC  = "#A78BFA"   # Accent → Violet (kept but slightly brighter)
-
-# ─────────────────────────────────────────────────────────────
-# SUPPORT / STATUS COLORS (high visibility)
-# ─────────────────────────────────────────────────────────────
-CGRN  = "#4ADE80"   # Success → vivid green (brighter than before)
-CRED  = "#FB7185"   # Alert → pink-red (better than dull red on dark)
-CYEL  = "#FACC15"   # Warning → bright yellow (new, useful)
-
-# ─────────────────────────────────────────────────────────────
-# TEXT (true contrast hierarchy)
-# ─────────────────────────────────────────────────────────────
-CTXT  = "#F9FAFB"   # primary text (almost white)
-CMUT  = "#94A3B8"   # secondary text (cool gray)
-
-# ─────────────────────────────────────────────────────────────
-# OBJECT COLORS (distinct, non-conflicting)
-# ─────────────────────────────────────────────────────────────
-COBJ1 = "#FB923C"   # orange
-COBJ2 = "#60A5FA"   # bright blue (less purple overlap)
-
-# ─────────────────────────────────────────────────────────────
-# OPTIONAL EXTRA COLORS (for multi-line plots)
-# ─────────────────────────────────────────────────────────────
+DARK  = "#020617"  
+PANEL = "#0B1220"  
+CARD  = "#111827"   
+BDR   = "#1F2A44"  
+CAMB  = "#F59E0B"  
+CQNT  = "#22D3EE"   
+CACC  = "#A78BFA" 
+CGRN  = "#4ADE80"  
+CRED  = "#FB7185"   
+CYEL  = "#FACC15"  
+CTXT  = "#F9FAFB"  
+CMUT  = "#94A3B8"  
+COBJ1 = "#FB923C"  
+COBJ2 = "#60A5FA"  
 CPINK = "#F472B6"
 CLIME = "#A3E635"
 CTEAL = "#2DD4BF"
@@ -152,7 +124,7 @@ plt.rcParams.update({
 
     "axes.grid": True,
     "axes.axisbelow": True,
-    "grid.color": "#1F2937",     # darker grid (less visual clutter)
+    "grid.color": "#1F2937",     
     "grid.linestyle": "--",
     "grid.alpha": 0.4,
 
@@ -168,9 +140,6 @@ plt.rcParams.update({
 
     "lines.linewidth": 2.2,
 })
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  SIDEBAR — fine-tuning parameters                                        ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
 with st.sidebar:
     st.markdown("## ⚛ Quantum Collision Estimator")
     st.markdown("---")
@@ -205,7 +174,7 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # ── Encounter Geometry override ───────────────────────────────────────
+   
     st.markdown('<div class="sidebar-label">📐 Encounter Geometry</div>', unsafe_allow_html=True)
     use_override = st.toggle("Override with custom geometry", value=False, help="Force a specific near-miss for demonstration")
     if use_override:
@@ -221,7 +190,7 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # ── Quantum Parameters ────────────────────────────────────────────────
+   
     st.markdown('<div class="sidebar-label">⚛ Quantum (IQAE)</div>', unsafe_allow_html=True)
     epsilon   = st.select_slider("Target precision ε",
         options=[0.05, 0.02, 0.01, 0.005, 0.002, 0.001], value=0.01)
@@ -232,7 +201,7 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # ── Monte Carlo ───────────────────────────────────────────────────────
+   
     st.markdown('<div class="sidebar-label">🎲 Monte Carlo</div>', unsafe_allow_html=True)
     mc_N = st.select_slider("MC samples N",
         options=[10_000, 50_000, 100_000, 500_000, 1_000_000, 2_000_000],
@@ -240,16 +209,13 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # ── TCA Search ────────────────────────────────────────────────────────
+    
     st.markdown('<div class="sidebar-label">🔭 TCA Search</div>', unsafe_allow_html=True)
     tca_window  = st.slider("Search window (min)", 30, 360, 120, 30)
     coarse_step = st.slider("Coarse step (s)", 5, 30, 10, 5)
 
     run_btn = st.button("▶  RUN SIMULATION", use_container_width=True, type="primary")
 
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  CORE PHYSICS FUNCTIONS                                                  ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
 
 def sgp4_state(sat, jd, fr):
     err, r, v = sat.sgp4(jd, fr)
@@ -348,13 +314,11 @@ def quantum_iqae(mu_r, mu_s, sig_r, sig_s, R, epsilon, alpha, q_dim):
     "qc": qc,
     }
 
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  SESSION STATE — run once, cache results                                 ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
+
 if "results" not in st.session_state:
     st.session_state.results = None
 
-# ── Header ────────────────────────────────────────────────────────────────────
+
 st.markdown("""
 <div style="text-align:center;padding:1.2rem 0 .5rem">
   <div style="font-family:'Space Mono',monospace;font-size:.75rem;letter-spacing:.18em;
@@ -375,7 +339,7 @@ st.markdown("""
 
 st.divider()
 
-# ── Run button logic ──────────────────────────────────────────────────────────
+
 if run_btn:
     with st.status("⚙ Running full pipeline …", expanded=True) as status:
         try:
@@ -464,9 +428,7 @@ if run_btn:
             status.update(label=f"❌ Error: {e}", state="error")
             st.exception(e)
 
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  DISPLAY TABS                                                            ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
+
 if st.session_state.results is None:
     st.info("⬅  Configure parameters in the sidebar and press **▶ RUN SIMULATION**")
     st.stop()
@@ -483,9 +445,7 @@ tabs = st.tabs([
     "📋 Mission Decision",
 ])
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 0 — OVERVIEW
-# ══════════════════════════════════════════════════════════════════════════════
+
 with tabs[0]:
     st.markdown("### 🌍 Mission Overview")
 
@@ -543,9 +503,7 @@ with tabs[0]:
 </div>
 """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — SGP4 PROPAGATION
-# ══════════════════════════════════════════════════════════════════════════════
+
 with tabs[1]:
     st.markdown("### 📡 SGP4 Orbital Propagation")
 
@@ -575,9 +533,7 @@ with tabs[1]:
         }
     st.dataframe(pd.DataFrame(vv_data), use_container_width=True, hide_index=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — QUANTUM vs CLASSICAL
-# ══════════════════════════════════════════════════════════════════════════════
+
 with tabs[2]:
     st.markdown("### ⚛ Quantum vs Classical Comparison")
 
@@ -645,12 +601,7 @@ with tabs[2]:
 | IQAE Pc  | `{qres['pc']:.4e}` |
 """)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — SCALING & COMPLEXITY
-# ══════════════════════════════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — SCALING & COMPLEXITY (Math & Layout Fixed)
-# ══════════════════════════════════════════════════════════════════════════════
+
 with tabs[3]:
     st.markdown("### 📈 Scaling & Complexity Analysis")
 
@@ -744,9 +695,7 @@ with tabs[3]:
     st.plotly_chart(fig_scale, use_container_width=True, theme=None)
 
 
-    # ==================================================
-    # FIGURE 2: CONVERGENCE (Math perfectly anchored)
-    # ==================================================
+    
     st.divider()
     st.markdown("#### Error vs Computational Effort (Convergence Rates)")
 
@@ -811,9 +760,7 @@ with tabs[3]:
     )
 
     st.plotly_chart(fig_conv, use_container_width=True, theme=None)
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 5 — CIRCUIT DIAGNOSTICS
-# ══════════════════════════════════════════════════════════════════════════════
+
 with tabs[4]:
     st.markdown("### 🎛 Quantum Circuit Diagnostics")
 
@@ -901,9 +848,7 @@ with tabs[4]:
     st.plotly_chart(fig_amp, use_container_width=True, theme=None)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 6 — MISSION DECISION
-# ══════════════════════════════════════════════════════════════════════════════
+
 with tabs[5]:
     st.markdown("### 📋 Mission Decision Report")
 
