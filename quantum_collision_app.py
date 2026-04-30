@@ -538,10 +538,13 @@ with tabs[0]:
     
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 1 — SGP4 PROPAGATION (2D Macro + 3D Micro Side-by-Side)
+# ══════════════════════════════════════════════════════════════════════════════
 with tabs[1]:
     st.markdown("### 📡 SGP4 Orbital Propagation & Encounter Geometry")
 
-    # Top Metrics
+    # --- Top Level Metrics ---
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("TCA Offset", f"{R['best_t_s']/60:.2f} min from epoch")
     c2.metric("True Miss Distance", f"{R['miss_km']*1000:.2f} m")
@@ -555,39 +558,32 @@ with tabs[1]:
         mu = 398600.4418 # Earth's gravitational parameter (km^3/s^2)
         r = np.linalg.norm(r_vec)
         v = np.linalg.norm(v_vec)
-        
-        # Specific mechanical energy & Semi-major axis
         eps = (v**2)/2 - mu/r
         a = -mu / (2*eps)
-        
-        # Angular momentum vector & Inclination
         h_vec = np.cross(r_vec, v_vec)
         h = np.linalg.norm(h_vec)
         inc = np.degrees(np.arccos(h_vec[2] / h))
-        
-        # Eccentricity vector
         e_vec = (1/mu) * ((v**2 - mu/r)*r_vec - np.dot(r_vec, v_vec)*v_vec)
         ecc = np.linalg.norm(e_vec)
-        
         return a - 6371.0, v, ecc, inc  # Alt(km), Vel(km/s), Ecc, Inc(deg)
 
     alt1, vel1, ecc1, inc1 = get_orbital_elements(R['r1'], R['v1'])
     alt2, vel2, ecc2, inc2 = get_orbital_elements(R['r2'], R['v2'])
 
-    col_data, col_plot = st.columns([1, 1.5])
-
-    with col_data:
-        st.markdown("#### 🛰️ Classical Orbital Elements")
-        st.write("Instantaneous Keplerian elements at the exact Time of Closest Approach (TCA).")
+    # --- DATA TABLES ROW ---
+    col_t1, col_t2 = st.columns(2)
+    import pandas as pd
+    with col_t1:
+        st.markdown("**🛰️ Classical Orbital Elements (At TCA)**")
         coe_data = {
             "Parameter": ["Altitude (km)", "Velocity (km/s)", "Eccentricity", "Inclination (deg)"],
             f"Asset": [f"{alt1:.1f}", f"{vel1:.2f}", f"{ecc1:.4f}", f"{inc1:.2f}"],
             f"Threat": [f"{alt2:.1f}", f"{vel2:.2f}", f"{ecc2:.4f}", f"{inc2:.2f}"]
         }
-        import pandas as pd
         st.dataframe(pd.DataFrame(coe_data), use_container_width=True, hide_index=True)
 
-        st.markdown("<br>#### 🧭 ECI State Vectors (km, km/s)", unsafe_allow_html=True)
+    with col_t2:
+        st.markdown("**🧭 ECI State Vectors (km, km/s)**", unsafe_allow_html=True)
         sv_data = {
             "Component": ["X", "Y", "Z", "Vx", "Vy", "Vz"],
             "Asset": [f"{R['r1'][0]:.2f}", f"{R['r1'][1]:.2f}", f"{R['r1'][2]:.2f}",
@@ -597,91 +593,160 @@ with tabs[1]:
         }
         st.dataframe(pd.DataFrame(sv_data), use_container_width=True, hide_index=True)
 
-    with col_plot:
-        st.markdown("#### 🧊 3D Relative Encounter (RSW Frame)")
-        st.write("Asset locked at origin. Debris trajectory shown over ±10 seconds.")
+    st.divider()
+
+    # --- PLOTS ROW ---
+    col_2d, col_3d = st.columns(2)
+
+    # 🌍 LEFT COLUMN: 2D ECI MACRO VIEW
+    with col_2d:
+        st.markdown("#### 🌍 2D ECI Orbit (Macro View)")
+        st.write("Earth-centered inertial X-Y plane at TCA.")
+        theta = np.linspace(0, 2*np.pi, 360)
+        R_E   = 6371.0
+
+        fig_eci = go.Figure()
         
-        # 1. Calculate RSW Basis Vectors from True ECI State
+        # Earth
+        fig_eci.add_trace(go.Scatter(
+            x=R_E*np.cos(theta), y=R_E*np.sin(theta),
+            fill='toself', fillcolor='#0B1220',
+            line=dict(color='#1a6b9a', width=1.5),
+            name='Earth', hoverinfo='skip'))
+            
+        # Dynamic Orbit Rings (using calculated altitudes)
+        for alt_km in [alt1, alt2]:
+            r_orb = R_E + alt_km
+            fig_eci.add_trace(go.Scatter(
+                x=r_orb*np.cos(theta), y=r_orb*np.sin(theta),
+                line=dict(color=BDR, width=1, dash='dot'),
+                showlegend=False, hoverinfo='skip'))
+                
+        # Satellites
+        for name, rv, col in [
+            (R["obj1"].split("(")[0].strip(), R["r1"], COBJ1),
+            (R["obj2"].split("(")[0].strip(), R["r2"], COBJ2),
+        ]:
+            fig_eci.add_trace(go.Scatter(
+                x=[rv[0]], y=[rv[1]], mode='markers+text',
+                marker=dict(size=10, color=col, symbol='circle'),
+                text=[name], textposition='top right',
+                textfont=dict(color=col, size=11),
+                name=name))
+
+        fig_eci.update_layout(
+            plot_bgcolor=DARK, paper_bgcolor=DARK,
+            font=dict(color=CTXT, family='monospace'),
+            xaxis=dict(scaleanchor='y', showgrid=True, gridcolor=BDR, title='X ECI (km)', color=CMUT),
+            yaxis=dict(showgrid=True, gridcolor=BDR, title='Y ECI (km)', color=CMUT),
+            legend=dict(bgcolor=CARD, bordercolor=BDR, yanchor="top", y=0.95, xanchor="left", x=0.05),
+            height=500, margin=dict(l=10, r=10, t=10, b=10),
+        )
+        st.plotly_chart(fig_eci, use_container_width=True, theme=None)
+
+    # 🧊 RIGHT COLUMN: 3D ANIMATED MICRO VIEW
+    with col_3d:
+        st.markdown("#### 🧊 3D Relative Encounter (Micro View)")
+        st.write("Press **▶ PLAY** to animate the encounter.")
+        
+        # Calculate RSW Basis Vectors
         r1 = R["r1"]; v1 = R["v1"]
         r2 = R["r2"]; v2 = R["v2"]
-        
         R_hat = r1 / np.linalg.norm(r1)
         W_hat = np.cross(r1, v1)
         W_hat /= np.linalg.norm(W_hat)
         S_hat = np.cross(W_hat, R_hat)
         
-        # 2. Project True Relative Velocity into the RSW Frame
         dv_eci = (v2 - v1) * 1000
-        dv_R = np.dot(dv_eci, R_hat)
-        dv_S = np.dot(dv_eci, S_hat)
-        dv_W = np.dot(dv_eci, W_hat)
+        dv_R = np.dot(dv_eci, R_hat); dv_S = np.dot(dv_eci, S_hat); dv_W = np.dot(dv_eci, W_hat)
         
-        # 3. TIE TO OVERRIDES: Use the exact variables passed to the Math Engine!
-        mu_r = R["mu_r"]
-        mu_s = R["mu_s"]
+        mu_r = R["mu_r"]; mu_s = R["mu_s"]; R_hbr = R["R_hbr"]
         
-        # Generate the debris trajectory line (+/- 10 seconds from TCA)
-        t_flyby = np.linspace(-10, 10, 50) 
+        # Trajectory Math
+        t_flyby = np.linspace(-10, 10, 60) 
         traj_R = mu_r + dv_R * t_flyby
         traj_S = mu_s + dv_S * t_flyby
-        traj_W = 0.0  + dv_W * t_flyby  # 2D Probability math ignores cross-track offset
+        traj_W = 0.0  + dv_W * t_flyby 
 
         fig_3d = go.Figure()
 
-        # 1. The Asset (At Origin)
+        # Asset
         fig_3d.add_trace(go.Scatter3d(
             x=[0], y=[0], z=[0], mode='markers+text',
-            marker=dict(size=6, color=COBJ1, symbol='diamond'),
+            marker=dict(size=5, color=COBJ1, symbol='diamond'),
             text=["Asset"], textposition="top center", name="Asset", hoverinfo='skip'
         ))
 
-        # 2. Hard-Body Radius (Protective Sphere)
-        u = np.linspace(0, 2 * np.pi, 30)
-        v = np.linspace(0, np.pi, 30)
-        R_hbr = R["R_hbr"]
+        # Hard-Body Sphere
+        u = np.linspace(0, 2 * np.pi, 30); v = np.linspace(0, np.pi, 30)
         x_sph = R_hbr * np.outer(np.cos(u), np.sin(v))
         y_sph = R_hbr * np.outer(np.sin(u), np.sin(v))
         z_sph = R_hbr * np.outer(np.ones(np.size(u)), np.cos(v))
 
-        # Note: We map X=Along-track(S), Y=Radial(R), Z=Cross-track(W) for standard viewing
         fig_3d.add_trace(go.Surface(
             x=x_sph, y=y_sph, z=z_sph,
             colorscale=[[0, CRED], [1, CRED]], opacity=0.15,
             showscale=False, hoverinfo='skip', name="Hard-Body Volume"
         ))
 
-        # 3. Debris Trajectory Path
+        # Trajectory Path
         fig_3d.add_trace(go.Scatter3d(
             x=traj_S, y=traj_R, z=traj_W, mode='lines',
-            line=dict(color=COBJ2, width=4, dash='solid'), name="Debris Trajectory"
+            line=dict(color=BDR, width=2, dash='solid'), hoverinfo='skip', showlegend=False
         ))
 
-        # 4. Debris Position at exact TCA
+        # Debris Marker (Animated)
         fig_3d.add_trace(go.Scatter3d(
-            x=[mu_s], y=[mu_r], z=[0], mode='markers+text',
+            x=[traj_S[0]], y=[traj_R[0]], z=[traj_W[0]], mode='markers+text',
             marker=dict(size=5, color=COBJ2, symbol='circle'),
-            text=[f"Miss: {R['miss_km']*1000:.1f}m"], textposition="bottom center", name="Debris at TCA"
+            text=[f"T: -10.0s"], textposition="top center", name="Debris"
         ))
 
-        # 5. Miss Distance Connecting Vector
-        fig_3d.add_trace(go.Scatter3d(
-            x=[0, mu_s], y=[0, mu_r], z=[0, 0], mode='lines',
-            line=dict(color=CRED, width=2, dash='dot'), name="Miss Vector"
-        ))
+        # Animations
+        frames = []
+        for i, t in enumerate(t_flyby):
+            curr_s, curr_r, curr_w = traj_S[i], traj_R[i], traj_W[i]
+            dist = np.sqrt(curr_s**2 + curr_r**2 + curr_w**2)
+            is_tca = (abs(t) == min(np.abs(t_flyby)))
+            
+            if is_tca:
+                if dist <= R_hbr:
+                    txt = f"<b>💥 COLLISION! ({dist:.1f}m)</b>"; c = CRED; size = 12
+                else:
+                    txt = f"<b>✅ SAFE MISS ({dist:.1f}m)</b>"; c = CGRN; size = 8
+            else:
+                txt = f"T: {t:+.1f}s"; c = COBJ2; size = 5
+                
+            frames.append(go.Frame(
+                data=[go.Scatter3d(
+                    x=[curr_s], y=[curr_r], z=[curr_w], mode='markers+text',
+                    marker=dict(size=size, color=c), text=[txt], textfont=dict(color=c)
+                )], traces=[3], name=f"frame_{i}"
+            ))
+
+        fig_3d.frames = frames
 
         fig_3d.update_layout(
+            updatemenus=[dict(
+                type="buttons", showactive=False, direction="left",
+                x=0.05, y=1.05, xanchor="left", yanchor="top",
+                buttons=[
+                    dict(label="▶ PLAY", method="animate",
+                         args=[None, dict(frame=dict(duration=80, redraw=True), transition=dict(duration=0), fromcurrent=True, mode="immediate")]),
+                    dict(label="⏸ PAUSE", method="animate",
+                         args=[[None], dict(frame=dict(duration=0, redraw=False), mode="immediate", transition=dict(duration=0))])
+                ], bgcolor=CARD, bordercolor=BDR, font=dict(color=CTXT)
+            )],
             scene=dict(
-                xaxis=dict(title="Along-track (S)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                yaxis=dict(title="Radial (R)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                zaxis=dict(title="Cross-track (W)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                bgcolor=DARK,
-                aspectmode='data' 
+                xaxis=dict(title="S (m)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                yaxis=dict(title="R (m)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                zaxis=dict(title="W (m)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                bgcolor=DARK, aspectmode='data' 
             ),
-            plot_bgcolor=DARK, paper_bgcolor=DARK,
-            font=dict(color=CTXT, family='monospace'),
+            plot_bgcolor=DARK, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
             margin=dict(l=0, r=0, t=10, b=0),
-            legend=dict(bgcolor=CARD, bordercolor=BDR, yanchor="top", y=0.95, xanchor="left", x=0.05),
-            height=450
+            legend=dict(bgcolor=DARK, bordercolor=BDR, yanchor="top", y=0.95, xanchor="right", x=0.95, font=dict(size=10)),
+            height=500
         )
         st.plotly_chart(fig_3d, use_container_width=True, theme=None)
 
