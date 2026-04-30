@@ -1113,7 +1113,7 @@ with tabs[4]:
     # --- EXTRACT CONCRETE DATA FROM THE ACTUAL CIRCUIT ---
     # NOTE: Ensure your backend `def_iqae` saves the circuit to `qres["circuit"]`
     if "circuit" in qres:
-        qc = qres["qc"]
+        qc = qres["circuit"]
         total_qubits = qc.num_qubits
         depth = qc.depth()
         
