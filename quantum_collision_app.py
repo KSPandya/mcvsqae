@@ -614,12 +614,6 @@ with tabs[1]:
     # --- PLOTS ROW ---
     col_static, col_anim = st.columns(2)
 
-    # ----------------------------------------------------------------------
-    # LEFT COLUMN: STATIC RELATIVE FRAME (User's requested plot)
-    # ----------------------------------------------------------------------
-    # ----------------------------------------------------------------------
-    # LEFT COLUMN: STATIC RELATIVE FRAME
-    # ----------------------------------------------------------------------
     with col_static:
         st.markdown("#### 🧊 3D Static Encounter (Relative)")
         st.write("Asset locked at origin. Debris trajectory shown over ±10 seconds.")
