@@ -1163,9 +1163,7 @@ with tabs[3]:
         st.plotly_chart(fig_conv, use_container_width=True, theme=None)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — CIRCUIT DIAGNOSTICS & IQAE TELEMETRY
-# ══════════════════════════════════════════════════════════════════════════════
+
 with tabs[4]: 
     st.markdown("### 🔬 Quantum Hardware Diagnostics & Algorithmic Flow")
     st.write("Extracting concrete telemetry directly from the compiled Qiskit `QuantumCircuit` object.")
@@ -1339,12 +1337,26 @@ with tabs[4]:
         fig_anim.frames = frames
 
         fig_anim.update_layout(
-            updatemenus=[dict(type="buttons", buttons=[dict(label="▶ PLAY", method="animate", args=[None, dict(frame=dict(duration=300, redraw=True))])],
-                             bgcolor=CARD, bordercolor=BDR, font=dict(color=CTXT, size=10), x=0, y=1.1)],
+            updatemenus=[dict(
+                type="buttons", 
+                showactive=False,
+                buttons=[dict(
+                    label="<span style='color:#38bdf8;'>▶ PLAY</span>", # Force Sky Blue text
+                    method="animate", 
+                    args=[None, dict(frame=dict(duration=300, redraw=True), fromcurrent=True)]
+                )],
+                # Darker background with explicit border to define the button shape
+                bgcolor="#0f172a", 
+                bordercolor="#38bdf8", 
+                font=dict(color="#38bdf8", size=12), 
+                x=0, y=1.15,
+                xanchor="left", yanchor="top"
+            )],
             xaxis=dict(title='Oracle Calls (M)', type='log', gridcolor=BDR, color=CMUT),
             yaxis=dict(title='Estimate', gridcolor=BDR, color=CMUT, tickformat='.2e'),
-            plot_bgcolor=PANEL, paper_bgcolor=DARK, height=380, margin=dict(l=60, r=20, t=50, b=40),
-            font=dict(family='monospace')
+            plot_bgcolor=PANEL, paper_bgcolor=DARK, height=380, 
+            margin=dict(l=60, r=20, t=60, b=40),
+            font=dict(family='monospace', color=CTXT)
         )
         st.plotly_chart(fig_anim, use_container_width=True, theme=None)
     
