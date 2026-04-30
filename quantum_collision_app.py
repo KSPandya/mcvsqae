@@ -598,22 +598,33 @@ with tabs[1]:
         st.dataframe(pd.DataFrame(sv_data), use_container_width=True, hide_index=True)
 
     with col_plot:
-        st.markdown("#### 🧊 3D Relative Encounter Diorama")
+        st.markdown("#### 🧊 3D Relative Encounter (RSW Frame)")
         st.write("Asset locked at origin. Debris trajectory shown over ±10 seconds.")
         
-        # Transform global ECI into Local Relative Coordinates (in meters)
-        r1_m = R["r1"] * 1000; v1_m = R["v1"] * 1000
-        r2_m = R["r2"] * 1000; v2_m = R["v2"] * 1000
+        # 1. Calculate RSW Basis Vectors from True ECI State
+        r1 = R["r1"]; v1 = R["v1"]
+        r2 = R["r2"]; v2 = R["v2"]
         
-        # Relative state vector (Debris relative to Asset)
-        dr = r2_m - r1_m
-        dv = v2_m - v1_m
+        R_hat = r1 / np.linalg.norm(r1)
+        W_hat = np.cross(r1, v1)
+        W_hat /= np.linalg.norm(W_hat)
+        S_hat = np.cross(W_hat, R_hat)
         
-        # Generate the debris trajectory line (Linear approx for short flyby)
-        t_flyby = np.linspace(-10, 10, 50) # +/- 10 seconds from TCA
-        traj_x = dr[0] + dv[0] * t_flyby
-        traj_y = dr[1] + dv[1] * t_flyby
-        traj_z = dr[2] + dv[2] * t_flyby
+        # 2. Project True Relative Velocity into the RSW Frame
+        dv_eci = (v2 - v1) * 1000
+        dv_R = np.dot(dv_eci, R_hat)
+        dv_S = np.dot(dv_eci, S_hat)
+        dv_W = np.dot(dv_eci, W_hat)
+        
+        # 3. TIE TO OVERRIDES: Use the exact variables passed to the Math Engine!
+        mu_r = R["mu_r"]
+        mu_s = R["mu_s"]
+        
+        # Generate the debris trajectory line (+/- 10 seconds from TCA)
+        t_flyby = np.linspace(-10, 10, 50) 
+        traj_R = mu_r + dv_R * t_flyby
+        traj_S = mu_s + dv_S * t_flyby
+        traj_W = 0.0  + dv_W * t_flyby  # 2D Probability math ignores cross-track offset
 
         fig_3d = go.Figure()
 
@@ -632,6 +643,7 @@ with tabs[1]:
         y_sph = R_hbr * np.outer(np.sin(u), np.sin(v))
         z_sph = R_hbr * np.outer(np.ones(np.size(u)), np.cos(v))
 
+        # Note: We map X=Along-track(S), Y=Radial(R), Z=Cross-track(W) for standard viewing
         fig_3d.add_trace(go.Surface(
             x=x_sph, y=y_sph, z=z_sph,
             colorscale=[[0, CRED], [1, CRED]], opacity=0.15,
@@ -640,29 +652,28 @@ with tabs[1]:
 
         # 3. Debris Trajectory Path
         fig_3d.add_trace(go.Scatter3d(
-            x=traj_x, y=traj_y, z=traj_z, mode='lines',
+            x=traj_S, y=traj_R, z=traj_W, mode='lines',
             line=dict(color=COBJ2, width=4, dash='solid'), name="Debris Trajectory"
         ))
 
         # 4. Debris Position at exact TCA
         fig_3d.add_trace(go.Scatter3d(
-            x=[dr[0]], y=[dr[1]], z=[dr[2]], mode='markers+text',
+            x=[mu_s], y=[mu_r], z=[0], mode='markers+text',
             marker=dict(size=5, color=COBJ2, symbol='circle'),
-            text=[f"Miss: {np.linalg.norm(dr):.1f}m"], textposition="bottom center", name="Debris at TCA"
+            text=[f"Miss: {R['miss_km']*1000:.1f}m"], textposition="bottom center", name="Debris at TCA"
         ))
 
         # 5. Miss Distance Connecting Vector
         fig_3d.add_trace(go.Scatter3d(
-            x=[0, dr[0]], y=[0, dr[1]], z=[0, dr[2]], mode='lines',
+            x=[0, mu_s], y=[0, mu_r], z=[0, 0], mode='lines',
             line=dict(color=CRED, width=2, dash='dot'), name="Miss Vector"
         ))
 
-        # Force a strictly 1:1:1 aspect ratio so the HBR sphere isn't squished into an oval
         fig_3d.update_layout(
             scene=dict(
-                xaxis=dict(title="ΔX (m)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                yaxis=dict(title="ΔY (m)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                zaxis=dict(title="ΔZ (m)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                xaxis=dict(title="Along-track (S)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                yaxis=dict(title="Radial (R)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                zaxis=dict(title="Cross-track (W)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
                 bgcolor=DARK,
                 aspectmode='data' 
             ),
