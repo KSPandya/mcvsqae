@@ -592,291 +592,297 @@ with tabs[0]:
     
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — SGP4 PROPAGATION (Side-by-Side Static vs Animated Motion)
-# ══════════════════════════════════════════════════════════════════════════════
 with tabs[1]:
-    st.markdown("### 📡 SGP4 Orbital Propagation & Encounter Geometry")
+        st.markdown("### 📡 SGP4 Orbital Propagation & Encounter Geometry")
 
-    # --- Top Level Metrics ---
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("TCA Offset", f"{R['best_t_s']/60:.2f} min from epoch")
-    c2.metric("True Miss Distance", f"{R['miss_km']*1000:.2f} m")
-    c3.metric("Relative Velocity", f"{np.linalg.norm(R['v1'] - R['v2']):.2f} km/s")
-    c4.metric("Propagation Time", f"{R['t_tca']*1e3:.0f} ms")
+        # --- Top Level Metrics ---
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("TCA Offset", f"{R['best_t_s']/60:.2f} min from epoch")
+        # UPDATED: Use the reactive mu_r and mu_s so this metric changes with sliders
+        c2.metric("Effective Miss Distance", f"{np.sqrt(R['mu_r']**2 + R['mu_s']**2):.2f} m")
+        c3.metric("Relative Velocity", f"{np.linalg.norm(R['v1'] - R['v2']):.2f} km/s")
+        c4.metric("Propagation Time", f"{R['t_tca']*1e3:.0f} ms")
 
-    st.divider()
+        st.divider()
 
-    # --- HELPER: Convert Cartesian Vectors to Orbital Elements ---
-    # --- HELPER: Convert Cartesian Vectors to Orbital Elements ---
-    def get_orbital_elements(r_vec, v_vec):
-        mu = 398600.4418 # Earth's gravitational parameter (km^3/s^2)
-        r = np.linalg.norm(r_vec)
-        v = np.linalg.norm(v_vec)
-        eps = (v**2)/2 - mu/r
-        a = -mu / (2*eps)
-        h_vec = np.cross(r_vec, v_vec)
-        h = np.linalg.norm(h_vec)
-        inc = np.degrees(np.arccos(h_vec[2] / h))
-        e_vec = (1/mu) * ((v**2 - mu/r)*r_vec - np.dot(r_vec, v_vec)*v_vec)
-        ecc = np.linalg.norm(e_vec)
-        return a - 6371.0, v, ecc, inc  # Alt(km), Vel(km/s), Ecc, Inc(deg)
+        # --- HELPER: Convert Cartesian Vectors to Orbital Elements ---
+        def get_orbital_elements(r_vec, v_vec):
+            mu = 398600.4418 # Earth's gravitational parameter (km^3/s^2)
+            r = np.linalg.norm(r_vec)
+            v = np.linalg.norm(v_vec)
+            eps = (v**2)/2 - mu/r
+            a = -mu / (2*eps)
+            h_vec = np.cross(r_vec, v_vec)
+            h = np.linalg.norm(h_vec)
+            inc = np.degrees(np.arccos(h_vec[2] / h))
+            e_vec = (1/mu) * ((v**2 - mu/r)*r_vec - np.dot(r_vec, v_vec)*v_vec)
+            ecc = np.linalg.norm(e_vec)
+            return a - 6371.0, v, ecc, inc  # Alt(km), Vel(km/s), Ecc, Inc(deg)
 
-    # --- DYNAMIC OVERRIDE INJECTION FOR TABLES ---
-    r1 = R['r1']; v1 = R['v1']
-    r2_raw = R['r2']; v2_raw = R['v2']
+        # --- DYNAMIC OVERRIDE INJECTION FOR TABLES ---
+        r1 = R['r1']; v1 = R['v1']
+        r2_raw = R['r2']; v2_raw = R['v2']
 
-    # 1. Calculate Asset's exact RSW Frame vectors
-    R_hat = r1 / np.linalg.norm(r1)
-    W_hat = np.cross(r1, v1)
-    W_hat /= np.linalg.norm(W_hat)
-    S_hat = np.cross(W_hat, R_hat)
-    
-    # 2. Reverse-project the Slider math (mu_r, mu_s) back into Global ECI space
-    # (Dividing by 1000 converts your slider meters back into kilometers)
-    r2_eff = r1 + (R['mu_r'] / 1000.0) * R_hat + (R['mu_s'] / 1000.0) * S_hat
-    v2_eff = v2_raw # Velocity remains unchanged by the distance sliders
-    
-    # 3. Calculate Orbital Elements using the Overridden Effective position!
-    alt1, vel1, ecc1, inc1 = get_orbital_elements(r1, v1)
-    alt2, vel2, ecc2, inc2 = get_orbital_elements(r2_eff, v2_eff)
-
-    # --- DATA TABLES ROW ---
-    col_t1, col_t2 = st.columns(2)
-    import pandas as pd
-    with col_t1:
-        st.markdown("**🛰️ Classical Orbital Elements (At TCA)**")
-        coe_data = {
-            "Parameter": ["Altitude (km)", "Velocity (km/s)", "Eccentricity", "Inclination (deg)"],
-            f"Asset": [f"{alt1:.1f}", f"{vel1:.2f}", f"{ecc1:.4f}", f"{inc1:.2f}"],
-            f"Threat": [f"{alt2:.1f}", f"{vel2:.2f}", f"{ecc2:.4f}", f"{inc2:.2f}"]
-        }
-        st.dataframe(pd.DataFrame(coe_data), use_container_width=True, hide_index=True)
-
-    with col_t2:
-        st.markdown("**🧭 ECI State Vectors (km, km/s)**", unsafe_allow_html=True)
-        sv_data = {
-            "Component": ["X", "Y", "Z", "Vx", "Vy", "Vz"],
-            "Asset": [f"{r1[0]:.2f}", f"{r1[1]:.2f}", f"{r1[2]:.2f}",
-                      f"{v1[0]:.4f}", f"{v1[1]:.4f}", f"{v1[2]:.4f}"],
-            "Threat": [f"{r2_eff[0]:.2f}", f"{r2_eff[1]:.2f}", f"{r2_eff[2]:.2f}",
-                       f"{v2_eff[0]:.4f}", f"{v2_eff[1]:.4f}", f"{v2_eff[2]:.4f}"]
-        }
-        st.dataframe(pd.DataFrame(sv_data), use_container_width=True, hide_index=True)
-    st.divider()
-
-    # --- PLOTS ROW ---
-    col_static, col_anim = st.columns(2)
-
-    with col_static:
-        st.markdown("#### 🧊 3D Static Encounter (Relative)")
-        st.write("Asset locked at origin. Debris trajectory shown over ±10 seconds.")
-        
-        # 1. Calculate RSW Basis Vectors
-        r1 = R["r1"]; v1 = R["v1"]
-        r2 = R["r2"]; v2 = R["v2"]
-        
+        # 1. Calculate Asset's exact RSW Frame vectors
         R_hat = r1 / np.linalg.norm(r1)
         W_hat = np.cross(r1, v1)
         W_hat /= np.linalg.norm(W_hat)
         S_hat = np.cross(W_hat, R_hat)
         
-        # 2. Project Relative Velocity
-        dv_eci = (v2 - v1) * 1000
-        dv_R = np.dot(dv_eci, R_hat); dv_S = np.dot(dv_eci, S_hat); dv_W = np.dot(dv_eci, W_hat)
+        # 2. Reverse-project the Slider math (mu_r, mu_s) back into Global ECI space
+        # (Dividing by 1000 converts your slider meters back into kilometers)
+        r2_eff = r1 + (R['mu_r'] / 1000.0) * R_hat + (R['mu_s'] / 1000.0) * S_hat
+        v2_eff = v2_raw # Velocity remains unchanged by the distance sliders
         
-        mu_r = R["mu_r"]; mu_s = R["mu_s"]
-        R_hbr = R["R_hbr"]
-        
-        # --- NEW LOGIC: Match the Threat level to the Animation ---
-        dist = np.sqrt(mu_s**2 + mu_r**2)
-        pc_risk = R["pc_mc"]
-        
-        if dist <= R_hbr:
-            txt_static = f"<b>💥 DIRECT HIT! ({dist:.1f}m)</b>"
-            c_static = CRED
-            marker_size = 10
-        elif pc_risk > 1e-4:
-            txt_static = f"<b>⚠️ HIGH RISK CLOUD! Center miss: {dist:.1f}m</b>"
-            c_static = CAMB
-            marker_size = 8
-        else:
-            txt_static = f"<b>✅ CLEAR MISS ({dist:.1f}m)</b>"
-            c_static = CGRN
-            marker_size = 6
-        
-        # Trajectory line
-        t_flyby = np.linspace(-10, 10, 50) 
-        traj_R = mu_r + dv_R * t_flyby
-        traj_S = mu_s + dv_S * t_flyby
-        traj_W = 0.0  + dv_W * t_flyby 
+        # 3. Calculate Orbital Elements using the Overridden Effective position!
+        alt1, vel1, ecc1, inc1 = get_orbital_elements(r1, v1)
+        alt2, vel2, ecc2, inc2 = get_orbital_elements(r2_eff, v2_eff)
 
-        fig_static = go.Figure()
+        # --- DATA TABLES ROW ---
+        col_t1, col_t2 = st.columns(2)
+        import pandas as pd
+        with col_t1:
+            st.markdown("**🛰️ Classical Orbital Elements (At TCA)**")
+            coe_data = {
+                "Parameter": ["Altitude (km)", "Velocity (km/s)", "Eccentricity", "Inclination (deg)"],
+                f"Asset": [f"{alt1:.1f}", f"{vel1:.2f}", f"{ecc1:.4f}", f"{inc1:.2f}"],
+                f"Threat": [f"{alt2:.1f}", f"{vel2:.2f}", f"{ecc2:.4f}", f"{inc2:.2f}"]
+            }
+            st.dataframe(pd.DataFrame(coe_data), use_container_width=True, hide_index=True)
 
-        # Asset (Origin)
-        fig_static.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='markers+text',
-            marker=dict(size=6, color=COBJ1, symbol='diamond'), text=["Asset"], textposition="top center", name="Asset"))
+        with col_t2:
+            st.markdown("**🧭 ECI State Vectors (km, km/s)**", unsafe_allow_html=True)
+            sv_data = {
+                "Component": ["X", "Y", "Z", "Vx", "Vy", "Vz"],
+                "Asset": [f"{r1[0]:.2f}", f"{r1[1]:.2f}", f"{r1[2]:.2f}",
+                          f"{v1[0]:.4f}", f"{v1[1]:.4f}", f"{v1[2]:.4f}"],
+                "Threat": [f"{r2_eff[0]:.2f}", f"{r2_eff[1]:.2f}", f"{r2_eff[2]:.2f}",
+                           f"{v2_eff[0]:.4f}", f"{v2_eff[1]:.4f}", f"{v2_eff[2]:.4f}"]
+            }
+            st.dataframe(pd.DataFrame(sv_data), use_container_width=True, hide_index=True)
+        st.divider()
 
-        # HBR Sphere
-        u = np.linspace(0, 2 * np.pi, 30); v = np.linspace(0, np.pi, 30)
-        x_sph = R_hbr * np.outer(np.cos(u), np.sin(v))
-        y_sph = R_hbr * np.outer(np.sin(u), np.sin(v))
-        z_sph = R_hbr * np.outer(np.ones(np.size(u)), np.cos(v))
+        # --- PLOTS ROW ---
+        col_static, col_anim = st.columns(2)
 
-        fig_static.add_trace(go.Surface(x=x_sph, y=y_sph, z=z_sph, colorscale=[[0, CRED], [1, CRED]], opacity=0.15, showscale=False, name="HBR"))
-
-        # Debris Trajectory
-        fig_static.add_trace(go.Scatter3d(x=traj_S, y=traj_R, z=traj_W, mode='lines', line=dict(color=COBJ2, width=4), name="Debris Path"))
-        
-        # Debris Marker at TCA (Now dynamically colored and labeled!)
-        fig_static.add_trace(go.Scatter3d(x=[mu_s], y=[mu_r], z=[0], mode='markers+text',
-            marker=dict(size=marker_size, color=c_static, symbol='circle'), 
-            text=[txt_static], textposition="bottom center", name="Debris at TCA",
-            textfont=dict(color=c_static, size=14)))
-
-        # Miss Vector
-        fig_static.add_trace(go.Scatter3d(x=[0, mu_s], y=[0, mu_r], z=[0, 0], mode='lines', line=dict(color=c_static, width=2, dash='dot'), name="Miss Vector"))
-
-        fig_static.update_layout(
-            scene=dict(
-                xaxis=dict(title="Along-track (S)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                yaxis=dict(title="Radial (R)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                zaxis=dict(title="Cross-track (W)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                bgcolor=DARK, aspectmode='data' 
-            ),
-            plot_bgcolor=DARK, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
-            margin=dict(l=0, r=0, t=10, b=0),
-            legend=dict(bgcolor=CARD, bordercolor=BDR, yanchor="top", y=0.95, xanchor="left", x=0.05),
-            height=500
-        )
-        st.plotly_chart(fig_static, use_container_width=True, theme=None)
-
-
-    # ----------------------------------------------------------------------
-    # RIGHT COLUMN: ANIMATED TRUE-MOTION FRAME
-    # ----------------------------------------------------------------------
-    with col_anim:
-        st.markdown("#### 🚀 3D Animated (True Motion)")
-        st.write("Both objects moving at orbital velocity ($\pm 0.25$ sec window).")
-        
-        # Absolute velocity of the Asset in the S-direction (meters/sec)
-        v_asset_mag = np.linalg.norm(v1) * 1000  
-
-        # Tight time window: If we use 10s, they move 76km and the sphere vanishes.
-        # At +/- 0.25s, they move ~1,900m. The 150m sphere remains visible.
-        t_anim = np.linspace(-0.25, 0.25, 45)
-
-        # Asset Motion (Moving strictly along its own S-axis)
-        traj_S1 = v_asset_mag * t_anim
-
-        # Debris Motion (Asset velocity + Relative velocity + Offset)
-        traj_S2 = mu_s + (v_asset_mag + dv_S) * t_anim
-        traj_R2 = mu_r + dv_R * t_anim
-        traj_W2 = 0.0  + dv_W * t_anim 
-
-        fig_anim = go.Figure()
-
-        # [Trace 0] Asset Marker
-        fig_anim.add_trace(go.Scatter3d(x=[traj_S1[0]], y=[0], z=[0], mode='markers',
-            marker=dict(size=6, color=COBJ1, symbol='diamond'), name="Asset"))
-
-        # [Trace 1] HBR Sphere (Centered on Asset's starting position)
-        fig_anim.add_trace(go.Surface(x=x_sph + traj_S1[0], y=y_sph, z=z_sph, colorscale=[[0, CRED], [1, CRED]], opacity=0.15, showscale=False))
-
-        # [Trace 2 & 3] Faded Background Trajectory Lines
-        fig_anim.add_trace(go.Scatter3d(x=traj_S1, y=np.zeros_like(t_anim), z=np.zeros_like(t_anim), mode='lines', line=dict(color=COBJ1, width=2, dash='dot'), showlegend=False))
-        fig_anim.add_trace(go.Scatter3d(x=traj_S2, y=traj_R2, z=traj_W2, mode='lines', line=dict(color=COBJ2, width=2, dash='dot'), showlegend=False))
-
-        # [Trace 4] Debris Marker
-        fig_anim.add_trace(go.Scatter3d(x=[traj_S2[0]], y=[traj_R2[0]], z=[traj_W2[0]], mode='markers+text',
-            marker=dict(size=5, color=COBJ2, symbol='circle'), text=[f"T: -0.25s"], textposition="top center", name="Debris"))
-
-       # --- BUILD ANIMATION FRAMES ---
-        frames = []
-        for i, t in enumerate(t_anim):
-            S1 = traj_S1[i]
-            S2, R2, W2 = traj_S2[i], traj_R2[i], traj_W2[i]
+        with col_static:
+            st.markdown("#### 🧊 3D Static Encounter (Relative)")
+            st.write("Asset locked at origin. Debris trajectory shown over ±10 seconds.")
             
-            # Deterministic distance between the centers
-            dist = np.sqrt((S2-S1)**2 + (R2-0)**2 + (W2-0)**2)
-            is_tca = (abs(t) == min(np.abs(t_anim)))
+            # 1. Calculate RSW Basis Vectors
+            r1 = R["r1"]; v1 = R["v1"]
+            r2 = R["r2"]; v2 = R["v2"]
             
-            # --- UPDATED LOGIC: Synchronized with Quantum COLA Protocol ---
-            if is_tca:
-                # Use the converged Quantum Probability for the visual alert
-                try:
-                    pc_risk = float(qres["pc"])
-                except:
-                    pc_risk = float(qres["pc"][0])
-                
-                if dist <= R_hbr:
-                    txt = f"<b>💥 DIRECT HIT! ({dist:.1f}m)</b>"
-                    c = CRED
-                    marker_size = 20
-                elif pc_risk > 1e-4:
-                    txt = f"<b>🔴 CRITICAL RISK! Pc: {pc_risk:.2e}</b>"
-                    c = CRED
-                    marker_size = 18
-                elif pc_risk > 1e-5:
-                    txt = f"<b>🟡 ELEVATED RISK! Pc: {pc_risk:.2e}</b>"
-                    c = CAMB
-                    marker_size = 16
-                elif pc_risk > 1e-6:
-                    txt = f"<b>🔵 MONITORING! Pc: {pc_risk:.2e}</b>"
-                    c = "#60A5FA" # Professional Blue
-                    marker_size = 14
-                else:
-                    txt = f"<b>🟢 CLEAR MISS ({dist:.1f}m)</b>"
-                    c = CGRN
-                    marker_size = 12
-                
-                text_size = 22
+            R_hat = r1 / np.linalg.norm(r1)
+            W_hat = np.cross(r1, v1)
+            W_hat /= np.linalg.norm(W_hat)
+            S_hat = np.cross(W_hat, R_hat)
+            
+            # 2. Project Relative Velocity
+            dv_eci = (v2 - v1) * 1000
+            dv_R = np.dot(dv_eci, R_hat); dv_S = np.dot(dv_eci, S_hat); dv_W = np.dot(dv_eci, W_hat)
+            
+            mu_r = R["mu_r"]; mu_s = R["mu_s"]
+            R_hbr = R["R_hbr"]
+            
+            # --- UPDATED LOGIC: Match the 4-Level Threat tier to the Static Animation ---
+            dist = np.sqrt(mu_s**2 + mu_r**2)
+            try:
+                pc_risk = float(qres["pc"])
+            except:
+                pc_risk = float(qres["pc"][0])
+            
+            if dist <= R_hbr:
+                txt_static = f"<b>💥 DIRECT HIT! ({dist:.1f}m)</b>"
+                c_static = CRED
+                marker_size = 12
+            elif pc_risk > 1e-4:
+                txt_static = f"<b>🔴 CRITICAL RISK! Pc: {pc_risk:.2e}</b>"
+                c_static = CRED
+                marker_size = 10
+            elif pc_risk > 1e-5:
+                txt_static = f"<b>🟡 ELEVATED RISK! Pc: {pc_risk:.2e}</b>"
+                c_static = CAMB
+                marker_size = 8
+            elif pc_risk > 1e-6:
+                txt_static = f"<b>🔵 MONITORING! Pc: {pc_risk:.2e}</b>"
+                c_static = "#60A5FA" # Professional Blue
+                marker_size = 6
             else:
-                txt = f"T: {t:+.2f}s"
-                c = COBJ2
-                marker_size = 5
-                text_size = 10
+                txt_static = f"<b>🟢 CLEAR MISS ({dist:.1f}m)</b>"
+                c_static = CGRN
+                marker_size = 6
+            
+            # Trajectory line
+            t_flyby = np.linspace(-10, 10, 50) 
+            traj_R = mu_r + dv_R * t_flyby
+            traj_S = mu_s + dv_S * t_flyby
+            traj_W = 0.0  + dv_W * t_flyby 
 
-            frame_data = [
-                go.Scatter3d(x=[S1], y=[0], z=[0]), 
-                go.Surface(x=x_sph + S1, y=y_sph, z=z_sph), 
-                go.Scatter3d(x=[S2], y=[R2], z=[W2], 
-                             marker=dict(size=marker_size, color=c, opacity=0.8), 
-                             text=[txt], 
-                             textfont=dict(color=c, size=text_size))
-            ]
+            fig_static = go.Figure()
 
-            frames.append(go.Frame(data=frame_data, traces=[0, 1, 4], name=f"frame_{i}"))
+            # Asset (Origin)
+            fig_static.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='markers+text',
+                marker=dict(size=6, color=COBJ1, symbol='diamond'), text=["Asset"], textposition="top center", name="Asset"))
 
-            # The Cinematic Pause at Closest Approach
-            if is_tca:
-                for pause_idx in range(33):
-                    frames.append(go.Frame(data=frame_data, traces=[0, 1, 4], name=f"frame_{i}_pause_{pause_idx}"))
+            # HBR Sphere
+            u = np.linspace(0, 2 * np.pi, 30); v = np.linspace(0, np.pi, 30)
+            x_sph = R_hbr * np.outer(np.cos(u), np.sin(v))
+            y_sph = R_hbr * np.outer(np.sin(u), np.sin(v))
+            z_sph = R_hbr * np.outer(np.ones(np.size(u)), np.cos(v))
 
-        fig_anim.frames = frames
+            fig_static.add_trace(go.Surface(x=x_sph, y=y_sph, z=z_sph, colorscale=[[0, CRED], [1, CRED]], opacity=0.15, showscale=False, name="HBR"))
 
-        fig_anim.update_layout(
-            updatemenus=[dict(
-                type="buttons", showactive=False, direction="left",
-                x=0.05, y=1.08, xanchor="left", yanchor="top",
-                buttons=[
-                    dict(label="▶ PLAY", method="animate", args=[None, dict(frame=dict(duration=60, redraw=True), transition=dict(duration=0), fromcurrent=True, mode="immediate")]),
-                    dict(label="⏸ PAUSE", method="animate", args=[[None], dict(frame=dict(duration=0, redraw=False), mode="immediate", transition=dict(duration=0))])
-                ], bgcolor=CARD, bordercolor=BDR, font=dict(color=CTXT)
-            )],
-            scene=dict(
-                xaxis=dict(title="Along-track (S)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                yaxis=dict(title="Radial (R)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                zaxis=dict(title="Cross-track (W)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
-                bgcolor=DARK, aspectmode='data' 
-            ),
-            plot_bgcolor=DARK, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
-            margin=dict(l=0, r=0, t=10, b=0),
-            legend=dict(bgcolor=DARK, bordercolor=BDR, yanchor="top", y=0.95, xanchor="right", x=0.95),
-            height=600 # Slightly taller for better 3D perspective
-        )
-        st.plotly_chart(fig_anim, use_container_width=True, theme=None)
+            # Debris Trajectory
+            fig_static.add_trace(go.Scatter3d(x=traj_S, y=traj_R, z=traj_W, mode='lines', line=dict(color=COBJ2, width=4), name="Debris Path"))
+            
+            # Debris Marker at TCA
+            fig_static.add_trace(go.Scatter3d(x=[mu_s], y=[mu_r], z=[0], mode='markers+text',
+                marker=dict(size=marker_size, color=c_static, symbol='circle'), 
+                text=[txt_static], textposition="bottom center", name="Debris at TCA",
+                textfont=dict(color=c_static, size=14)))
 
+            # Miss Vector
+            fig_static.add_trace(go.Scatter3d(x=[0, mu_s], y=[0, mu_r], z=[0, 0], mode='lines', line=dict(color=c_static, width=2, dash='dot'), name="Miss Vector"))
+
+            fig_static.update_layout(
+                scene=dict(
+                    xaxis=dict(title="Along-track (S)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                    yaxis=dict(title="Radial (R)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                    zaxis=dict(title="Cross-track (W)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                    bgcolor=DARK, aspectmode='data' 
+                ),
+                plot_bgcolor=DARK, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
+                margin=dict(l=0, r=0, t=10, b=0),
+                legend=dict(bgcolor=CARD, bordercolor=BDR, yanchor="top", y=0.95, xanchor="left", x=0.05),
+                height=500
+            )
+            st.plotly_chart(fig_static, use_container_width=True, theme=None)
+
+
+        # ----------------------------------------------------------------------
+        # RIGHT COLUMN: ANIMATED TRUE-MOTION FRAME
+        # ----------------------------------------------------------------------
+        with col_anim:
+            st.markdown("#### 🚀 3D Animated (True Motion)")
+            st.write("Both objects moving at orbital velocity ($\pm 0.25$ sec window).")
+            
+            # Absolute velocity of the Asset in the S-direction (meters/sec)
+            v_asset_mag = np.linalg.norm(v1) * 1000  
+
+            # Tight time window
+            t_anim = np.linspace(-0.25, 0.25, 45)
+
+            # Asset Motion (Moving strictly along its own S-axis)
+            traj_S1 = v_asset_mag * t_anim
+
+            # Debris Motion (Asset velocity + Relative velocity + Offset)
+            traj_S2 = mu_s + (v_asset_mag + dv_S) * t_anim
+            traj_R2 = mu_r + dv_R * t_anim
+            traj_W2 = 0.0  + dv_W * t_anim 
+
+            fig_anim = go.Figure()
+
+            # [Trace 0] Asset Marker
+            fig_anim.add_trace(go.Scatter3d(x=[traj_S1[0]], y=[0], z=[0], mode='markers',
+                marker=dict(size=6, color=COBJ1, symbol='diamond'), name="Asset"))
+
+            # [Trace 1] HBR Sphere
+            fig_anim.add_trace(go.Surface(x=x_sph + traj_S1[0], y=y_sph, z=z_sph, colorscale=[[0, CRED], [1, CRED]], opacity=0.15, showscale=False))
+
+            # [Trace 2 & 3] Faded Background Trajectory Lines
+            fig_anim.add_trace(go.Scatter3d(x=traj_S1, y=np.zeros_like(t_anim), z=np.zeros_like(t_anim), mode='lines', line=dict(color=COBJ1, width=2, dash='dot'), showlegend=False))
+            fig_anim.add_trace(go.Scatter3d(x=traj_S2, y=traj_R2, z=traj_W2, mode='lines', line=dict(color=COBJ2, width=2, dash='dot'), showlegend=False))
+
+            # [Trace 4] Debris Marker
+            fig_anim.add_trace(go.Scatter3d(x=[traj_S2[0]], y=[traj_R2[0]], z=[traj_W2[0]], mode='markers+text',
+                marker=dict(size=5, color=COBJ2, symbol='circle'), text=[f"T: -0.25s"], textposition="top center", name="Debris"))
+
+           # --- BUILD ANIMATION FRAMES ---
+            frames = []
+            for i, t in enumerate(t_anim):
+                S1 = traj_S1[i]
+                S2, R2, W2 = traj_S2[i], traj_R2[i], traj_W2[i]
+                
+                dist = np.sqrt((S2-S1)**2 + (R2-0)**2 + (W2-0)**2)
+                is_tca = (abs(t) == min(np.abs(t_anim)))
+                
+                # --- SYNCHRONIZED QUANTUM COLA PROTOCOL ---
+                if is_tca:
+                    try:
+                        pc_risk = float(qres["pc"])
+                    except:
+                        pc_risk = float(qres["pc"][0])
+                    
+                    if dist <= R_hbr:
+                        txt = f"<b>💥 DIRECT HIT! ({dist:.1f}m)</b>"
+                        c = CRED
+                        marker_size = 20
+                    elif pc_risk > 1e-4:
+                        txt = f"<b>🔴 CRITICAL RISK! Pc: {pc_risk:.2e}</b>"
+                        c = CRED
+                        marker_size = 18
+                    elif pc_risk > 1e-5:
+                        txt = f"<b>🟡 ELEVATED RISK! Pc: {pc_risk:.2e}</b>"
+                        c = CAMB
+                        marker_size = 16
+                    elif pc_risk > 1e-6:
+                        txt = f"<b>🔵 MONITORING! Pc: {pc_risk:.2e}</b>"
+                        c = "#60A5FA"
+                        marker_size = 14
+                    else:
+                        txt = f"<b>🟢 CLEAR MISS ({dist:.1f}m)</b>"
+                        c = CGRN
+                        marker_size = 12
+                    
+                    text_size = 22
+                else:
+                    txt = f"T: {t:+.2f}s"
+                    c = COBJ2
+                    marker_size = 5
+                    text_size = 10
+
+                frame_data = [
+                    go.Scatter3d(x=[S1], y=[0], z=[0]), 
+                    go.Surface(x=x_sph + S1, y=y_sph, z=z_sph), 
+                    go.Scatter3d(x=[S2], y=[R2], z=[W2], 
+                                 marker=dict(size=marker_size, color=c, opacity=0.8), 
+                                 text=[txt], 
+                                 textfont=dict(color=c, size=text_size))
+                ]
+
+                frames.append(go.Frame(data=frame_data, traces=[0, 1, 4], name=f"frame_{i}"))
+
+                # Cinematic Pause
+                if is_tca:
+                    for pause_idx in range(33):
+                        frames.append(go.Frame(data=frame_data, traces=[0, 1, 4], name=f"frame_{i}_pause_{pause_idx}"))
+
+            fig_anim.frames = frames
+
+            fig_anim.update_layout(
+                updatemenus=[dict(
+                    type="buttons", showactive=False, direction="left",
+                    x=0.05, y=1.08, xanchor="left", yanchor="top",
+                    # --- FIX: High contrast buttons forced via span colors ---
+                    buttons=[
+                        dict(label="<span style='color:#38bdf8;'>▶ PLAY</span>", method="animate", args=[None, dict(frame=dict(duration=60, redraw=True), transition=dict(duration=0), fromcurrent=True, mode="immediate")]),
+                        dict(label="<span style='color:#38bdf8;'>⏸ PAUSE</span>", method="animate", args=[[None], dict(frame=dict(duration=0, redraw=False), mode="immediate", transition=dict(duration=0))])
+                    ], 
+                    bgcolor="#0f172a", bordercolor="#38bdf8", font=dict(color="#38bdf8")
+                )],
+                scene=dict(
+                    xaxis=dict(title="Along-track (S)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                    yaxis=dict(title="Radial (R)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                    zaxis=dict(title="Cross-track (W)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                    bgcolor=DARK, aspectmode='data' 
+                ),
+                plot_bgcolor=DARK, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
+                margin=dict(l=0, r=0, t=10, b=0),
+                legend=dict(bgcolor=DARK, bordercolor=BDR, yanchor="top", y=0.95, xanchor="right", x=0.95),
+                height=600 
+            )
+            st.plotly_chart(fig_anim, use_container_width=True, theme=None)
 with tabs[2]:
     st.markdown("### ⚛ Quantum vs Classical Comparison")
 
