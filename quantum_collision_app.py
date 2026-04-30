@@ -1282,7 +1282,7 @@ with tabs[4]:
 
         fig_anim.update_layout(
             updatemenus=[dict(type="buttons", buttons=[dict(label="▶ PLAY", method="animate", args=[None, dict(frame=dict(duration=300, redraw=True))])],
-                             bgcolor=CARD, font=dict(color=CTXT, size=10), x=0, y=1.1)],
+                             bgcolor=CARD, bordercolor=BDR, font=dict(color=CTXT, size=10), x=0, y=1.1)],
             xaxis=dict(title='Oracle Calls (M)', type='log', gridcolor=BDR, color=CMUT),
             yaxis=dict(title='Estimate', gridcolor=BDR, color=CMUT, tickformat='.2e'),
             plot_bgcolor=PANEL, paper_bgcolor=DARK, height=380, margin=dict(l=60, r=20, t=50, b=40),
