@@ -1207,101 +1207,86 @@ with tabs[4]:
     # ------------------------------------------------------------------
     # ROW 3: IQAE FLOWCHART & ANIMATION (Side-by-Side)
     # ------------------------------------------------------------------
-    col_flow, col_anim = st.columns([1, 1.2])
-
-    # --- LEFT: IQAE ALGORITHM FLOWCHART ---
-    with col_flow:
+    # ------------------------------------------------------------------
+    # 5. IQAE FLOW & ANIMATION (REPAIRED)
+    # ------------------------------------------------------------------
+    col_f, col_a = st.columns([1, 1.2])
+    
+    with col_f:
         st.markdown("#### 🔄 Iterative QAE Flowchart")
-        st.write("The hybrid quantum-classical loop.")
-        
         fig_flow = go.Figure()
-
-        def draw_node(fig, x, y, text, color, width=3):
-            fig.add_shape(type="rect", x0=x-width/2, x1=x+width/2, y0=y-0.4, y1=y+0.4, line=dict(color=color, width=2), fillcolor=PANEL)
-            fig.add_annotation(x=x, y=y, text=text, showarrow=False, font=dict(color=CTXT, size=12))
+        def draw_node(fig, x, y, text, color, width=3.2):
+            fig.add_shape(type="rect", x0=x-width/2, x1=x+width/2, y0=y-0.4, y1=y+0.4, 
+                          line=dict(color=color, width=2), fillcolor=PANEL)
+            fig.add_annotation(x=x, y=y, text=text, showarrow=False, font=dict(color=CTXT, size=11))
 
         def draw_arrow(fig, x0, y0, x1, y1):
-            fig.add_annotation(x=x1, y=y1, ax=x0, ay=y0, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=2, arrowcolor=CMUT)
+            fig.add_annotation(x=x1, y=y1, ax=x0, ay=y0, xref="x", yref="y", axref="x", ayref="y",
+                               showarrow=True, arrowhead=2, arrowsize=1.2, arrowwidth=2, arrowcolor=CMUT)
 
-        draw_node(fig_flow, 5, 5, "<b>1. Quantum Init:</b><br>Define max target error (ε)", CACC)
-        draw_node(fig_flow, 5, 3.5, "<b>2. Quantum Execution:</b><br>Run Circuit (𝒜 + 𝒬ᵏ)<br>Measure Ancilla", CQNT)
-        draw_node(fig_flow, 5, 2, "<b>3. Classical Update:</b><br>Adjust Confidence Interval<br>[θ_lower, θ_upper]", CAMB)
-        draw_node(fig_flow, 5, 0.5, "<b>4. Precision Check:</b><br>Is (θ_u - θ_l) < ε?", CRED)
-        draw_node(fig_flow, 2, 0.5, "<b>5. Return:</b><br>Final Probability (Pc)", CGRN, width=2.5)
+        draw_node(fig_flow, 5, 5, "<b>1. Initialization</b><br>Set precision ε", CACC)
+        draw_node(fig_flow, 5, 3.5, "<b>2. Quantum Execution</b><br>Run Circuit (𝒜 + 𝒬ᵏ)", CQNT)
+        draw_node(fig_flow, 5, 2, "<b>3. Confidence Update</b><br>Bayesian/Chernoff Update", CAMB)
+        draw_node(fig_flow, 5, 0.5, "<b>4. Convergence?</b><br>Error < ε", CRED)
+        draw_node(fig_flow, 2, 0.5, "<b>5. Result</b><br>Final Pc", CGRN, width=2)
 
-        draw_arrow(fig_flow, 5, 4.6, 5, 3.9)
-        draw_arrow(fig_flow, 5, 3.1, 5, 2.4)
-        draw_arrow(fig_flow, 5, 1.6, 5, 0.9)
-        
-        # Loop back arrow
-        fig_flow.add_trace(go.Scatter(x=[6.5, 7.5, 7.5, 6.5], y=[0.5, 0.5, 3.5, 3.5], mode='lines', line=dict(color=CMUT, width=2)))
-        fig_flow.add_annotation(x=6.5, y=3.5, ax=6.8, ay=3.5, showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=2, arrowcolor=CMUT)
-        fig_flow.add_annotation(x=7.5, y=2, text="No (Increase k)", showarrow=False, textangle=90, font=dict(color=CMUT, size=11), xshift=15)
+        draw_arrow(fig_flow, 5, 4.6, 5, 3.9); draw_arrow(fig_flow, 5, 3.1, 5, 2.4); draw_arrow(fig_flow, 5, 1.6, 5, 0.9)
+        fig_flow.add_trace(go.Scatter(x=[6.6, 7.5, 7.5, 6.6], y=[0.5, 0.5, 3.5, 3.5], mode='lines', line=dict(color=CMUT, width=2), hoverinfo='skip'))
+        draw_arrow(fig_flow, 3.4, 0.5, 3.1, 0.5)
 
-        # Exit arrow
-        draw_arrow(fig_flow, 3.5, 0.5, 3.2, 0.5)
-        fig_flow.add_annotation(x=3.35, y=0.5, text="Yes", showarrow=False, font=dict(color=CMUT, size=11), yshift=15)
-
-        fig_flow.update_layout(
-            xaxis=dict(range=[0, 8.5], showgrid=False, zeroline=False, visible=False),
-            yaxis=dict(range=[0, 5.5], showgrid=False, zeroline=False, visible=False),
-            plot_bgcolor=DARK, paper_bgcolor=DARK, height=380, margin=dict(l=0, r=0, t=10, b=10)
-        )
+        fig_flow.update_layout(xaxis=dict(visible=False, range=[0, 8.5]), yaxis=dict(visible=False, range=[0, 5.5]),
+                              plot_bgcolor=DARK, paper_bgcolor=DARK, height=380, margin=dict(l=0, r=0, t=10, b=10), showlegend=False)
         st.plotly_chart(fig_flow, use_container_width=True, theme=None)
-
-    # --- RIGHT: IQAE ANIMATED CONVERGENCE ---
-    with col_anim:
-        st.markdown("#### 🎯 Amplitude Estimate Convergence")
-        st.write("Press **▶ PLAY** to watch the Chernoff bounds shrink exponentially as oracle calls ($M$) increase.")
-
-        iters = 12
-        pc_true = qres["circuit"]
         
+    with col_a:
+        st.markdown("#### 🎯 IQAE Algorithmic Convergence")
+        
+        # --- FIX: Ensure pc_true is a float and not a list/array ---
+        try:
+            pc_true = float(qres["pc"])
+        except:
+            pc_true = float(qres["pc"][0])
+            
+        iters = 12
         m_arr = [int(2**(i*0.8)) for i in range(1, iters+1)] 
-        base_error = max(pc_true * 1.5, 1e-5)
-        err_arr = [base_error / (m * 0.5) for m in m_arr]
+        
+        # FIX: Ensure base_error is not zero
+        base_error = max(pc_true * 1.5, R["epsilon"] * 5, 1e-4)
+        err_arr = [base_error / (m**0.6) for m in m_arr]
         
         np.random.seed(42)
-        est_arr = [pc_true + (np.random.randn() * err_arr[i] * 0.3) for i in range(iters)]
+        est_arr = [pc_true + (np.random.randn() * err_arr[i] * 0.2) for i in range(iters)]
         est_arr[-1] = pc_true 
-        err_arr[-1] = (qres["ci"][1] - qres["ci"][0]) / 2
+        
+        # Sync the final error bar with actual Confidence Interval from qres
+        final_ci_half = (qres["ci"][1] - qres["ci"][0]) / 2
+        err_arr[-1] = final_ci_half
 
-        upper_bound = [est_arr[i] + err_arr[i] for i in range(iters)]
-        lower_bound = [max(est_arr[i] - err_arr[i], 0) for i in range(iters)]
+        upper_b = [est_arr[i] + err_arr[i] for i in range(iters)]
+        lower_b = [max(est_arr[i] - err_arr[i], 1e-12) for i in range(iters)]
 
         fig_anim = go.Figure()
-
-        fig_anim.add_trace(go.Scatter(x=[m_arr[0]], y=[upper_bound[0]], mode='lines+markers', name='Upper Bound', line=dict(color=CRED, width=2, dash='dot')))
-        fig_anim.add_trace(go.Scatter(x=[m_arr[0]], y=[lower_bound[0]], mode='lines+markers', name='Lower Bound', line=dict(color=CGRN, width=2, dash='dot'), fill='tonexty', fillcolor='rgba(255,255,255,0.05)'))
-        fig_anim.add_trace(go.Scatter(x=[m_arr[0]], y=[est_arr[0]], mode='lines+markers', name='Current Estimate', line=dict(color=CQNT, width=3)))
-
-        fig_anim.add_hline(y=pc_true, line=dict(color=CMUT, width=1, dash='dash'), annotation=dict(text="Target Pc", font=dict(color=CMUT, size=10)))
+        fig_anim.add_trace(go.Scatter(x=[m_arr[0]], y=[upper_b[0]], mode='lines', name='Upper', line=dict(color=CRED, width=1, dash='dot')))
+        fig_anim.add_trace(go.Scatter(x=[m_arr[0]], y=[lower_b[0]], mode='lines', name='Lower', line=dict(color=CGRN, width=1, dash='dot'), fill='tonexty', fillcolor='rgba(255,255,255,0.05)'))
+        fig_anim.add_trace(go.Scatter(x=[m_arr[0]], y=[est_arr[0]], mode='lines+markers', name='Estimate', line=dict(color=CQNT, width=3)))
+        fig_anim.add_hline(y=pc_true, line=dict(color=CMUT, width=1, dash='dash'))
 
         frames = []
         for i in range(1, iters + 1):
-            frames.append(go.Frame(
-                data=[
-                    go.Scatter(x=m_arr[:i], y=upper_bound[:i]),
-                    go.Scatter(x=m_arr[:i], y=lower_bound[:i]),
-                    go.Scatter(x=m_arr[:i], y=est_arr[:i])
-                ],
-                name=f"frame_{i}"
-            ))
+            frames.append(go.Frame(data=[
+                go.Scatter(x=m_arr[:i], y=upper_b[:i]),
+                go.Scatter(x=m_arr[:i], y=lower_b[:i]),
+                go.Scatter(x=m_arr[:i], y=est_arr[:i])
+            ], name=f"f{i}"))
         fig_anim.frames = frames
 
         fig_anim.update_layout(
-            updatemenus=[dict(
-                type="buttons", showactive=False, direction="left", x=0.0, y=1.15, xanchor="left", yanchor="top",
-                buttons=[
-                    dict(label="▶ PLAY", method="animate", args=[None, dict(frame=dict(duration=400, redraw=True), transition=dict(duration=200), fromcurrent=True, mode="immediate")]),
-                    dict(label="⏮ RESET", method="animate", args=[[None], dict(frame=dict(duration=0, redraw=False), mode="immediate", transition=dict(duration=0))])
-                ], bgcolor=CARD, bordercolor=BDR, font=dict(color=CTXT, size=10)
-            )],
-            xaxis=dict(title='Cumulative Oracle Calls (M) [Log Scale]', type='log', showgrid=True, gridcolor=BDR, color=CMUT),
-            yaxis=dict(title='Collision Probability Estimate', showgrid=True, gridcolor=BDR, color=CMUT, tickformat='.2e'),
-            plot_bgcolor=PANEL, paper_bgcolor=DARK, font=dict(color=CTXT, family='monospace'),
-            legend=dict(bgcolor=CARD, bordercolor=BDR, yanchor="top", y=0.95, xanchor="right", x=0.95, font=dict(size=10)),
-            height=380, margin=dict(l=60, r=20, t=50, b=40)
+            updatemenus=[dict(type="buttons", buttons=[dict(label="▶ PLAY", method="animate", args=[None, dict(frame=dict(duration=300, redraw=True))])],
+                             bgcolor=CARD, font=dict(color=CTXT, size=10), x=0, y=1.1)],
+            xaxis=dict(title='Oracle Calls (M)', type='log', gridcolor=BDR, color=CMUT),
+            yaxis=dict(title='Estimate', gridcolor=BDR, color=CMUT, tickformat='.2e'),
+            plot_bgcolor=PANEL, paper_bgcolor=DARK, height=380, margin=dict(l=60, r=20, t=50, b=40),
+            font=dict(family='monospace')
         )
         st.plotly_chart(fig_anim, use_container_width=True, theme=None)
     
