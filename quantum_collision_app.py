@@ -537,34 +537,142 @@ with tabs[0]:
 
     
 
-with tabs[1]:
-    st.markdown("### 📡 SGP4 Orbital Propagation")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("TCA offset",     f"{R['best_t_s']/60:.2f} min from epoch")
-    c2.metric("Miss Distance",  f"{R['miss_km']*1000:.2f} m")
-    c3.metric("TCA search time",f"{R['t_tca']*1e3:.0f} ms")
+with tabs[1]:
+    st.markdown("### 📡 SGP4 Orbital Propagation & Encounter Geometry")
+
+    # Top Metrics
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("TCA Offset", f"{R['best_t_s']/60:.2f} min from epoch")
+    c2.metric("True Miss Distance", f"{R['miss_km']*1000:.2f} m")
+    c3.metric("Relative Velocity", f"{np.linalg.norm(R['v1'] - R['v2']):.2f} km/s")
+    c4.metric("Propagation Time", f"{R['t_tca']*1e3:.0f} ms")
 
     st.divider()
-    st.markdown("**State Vectors at TCA**")
-    sv_data = {
-            "Component": ["X (km)", "Y (km)", "Z (km)"],
-            f"{R['obj1'].split('(')[0].strip()} Position": [
-                f"{R['r1'][0]:.3f}", f"{R['r1'][1]:.3f}", f"{R['r1'][2]:.3f}"],
-            f"{R['obj2'].split('(')[0].strip()} Position": [
-                f"{R['r2'][0]:.3f}", f"{R['r2'][1]:.3f}", f"{R['r2'][2]:.3f}"],
-        }
-    import pandas as pd
-    st.dataframe(pd.DataFrame(sv_data), use_container_width=True, hide_index=True)
 
-    vv_data = {
-            "Component": ["Vx (km/s)", "Vy (km/s)", "Vz (km/s)"],
-            f"{R['obj1'].split('(')[0].strip()} Velocity": [
-                f"{R['v1'][0]:.4f}", f"{R['v1'][1]:.4f}", f"{R['v1'][2]:.4f}"],
-            f"{R['obj2'].split('(')[0].strip()} Velocity": [
-                f"{R['v2'][0]:.4f}", f"{R['v2'][1]:.4f}", f"{R['v2'][2]:.4f}"],
+    # --- HELPER: Convert Cartesian Vectors to Orbital Elements ---
+    def get_orbital_elements(r_vec, v_vec):
+        mu = 398600.4418 # Earth's gravitational parameter (km^3/s^2)
+        r = np.linalg.norm(r_vec)
+        v = np.linalg.norm(v_vec)
+        
+        # Specific mechanical energy & Semi-major axis
+        eps = (v**2)/2 - mu/r
+        a = -mu / (2*eps)
+        
+        # Angular momentum vector & Inclination
+        h_vec = np.cross(r_vec, v_vec)
+        h = np.linalg.norm(h_vec)
+        inc = np.degrees(np.arccos(h_vec[2] / h))
+        
+        # Eccentricity vector
+        e_vec = (1/mu) * ((v**2 - mu/r)*r_vec - np.dot(r_vec, v_vec)*v_vec)
+        ecc = np.linalg.norm(e_vec)
+        
+        return a - 6371.0, v, ecc, inc  # Alt(km), Vel(km/s), Ecc, Inc(deg)
+
+    alt1, vel1, ecc1, inc1 = get_orbital_elements(R['r1'], R['v1'])
+    alt2, vel2, ecc2, inc2 = get_orbital_elements(R['r2'], R['v2'])
+
+    col_data, col_plot = st.columns([1, 1.5])
+
+    with col_data:
+        st.markdown("#### 🛰️ Classical Orbital Elements")
+        st.write("Instantaneous Keplerian elements at the exact Time of Closest Approach (TCA).")
+        coe_data = {
+            "Parameter": ["Altitude (km)", "Velocity (km/s)", "Eccentricity", "Inclination (deg)"],
+            f"Asset": [f"{alt1:.1f}", f"{vel1:.2f}", f"{ecc1:.4f}", f"{inc1:.2f}"],
+            f"Threat": [f"{alt2:.1f}", f"{vel2:.2f}", f"{ecc2:.4f}", f"{inc2:.2f}"]
         }
-    st.dataframe(pd.DataFrame(vv_data), use_container_width=True, hide_index=True)
+        import pandas as pd
+        st.dataframe(pd.DataFrame(coe_data), use_container_width=True, hide_index=True)
+
+        st.markdown("<br>#### 🧭 ECI State Vectors (km, km/s)", unsafe_allow_html=True)
+        sv_data = {
+            "Component": ["X", "Y", "Z", "Vx", "Vy", "Vz"],
+            "Asset": [f"{R['r1'][0]:.2f}", f"{R['r1'][1]:.2f}", f"{R['r1'][2]:.2f}",
+                      f"{R['v1'][0]:.4f}", f"{R['v1'][1]:.4f}", f"{R['v1'][2]:.4f}"],
+            "Threat": [f"{R['r2'][0]:.2f}", f"{R['r2'][1]:.2f}", f"{R['r2'][2]:.2f}",
+                       f"{R['v2'][0]:.4f}", f"{R['v2'][1]:.4f}", f"{R['v2'][2]:.4f}"]
+        }
+        st.dataframe(pd.DataFrame(sv_data), use_container_width=True, hide_index=True)
+
+    with col_plot:
+        st.markdown("#### 🧊 3D Relative Encounter Diorama")
+        st.write("Asset locked at origin. Debris trajectory shown over ±10 seconds.")
+        
+        # Transform global ECI into Local Relative Coordinates (in meters)
+        r1_m = R["r1"] * 1000; v1_m = R["v1"] * 1000
+        r2_m = R["r2"] * 1000; v2_m = R["v2"] * 1000
+        
+        # Relative state vector (Debris relative to Asset)
+        dr = r2_m - r1_m
+        dv = v2_m - v1_m
+        
+        # Generate the debris trajectory line (Linear approx for short flyby)
+        t_flyby = np.linspace(-10, 10, 50) # +/- 10 seconds from TCA
+        traj_x = dr[0] + dv[0] * t_flyby
+        traj_y = dr[1] + dv[1] * t_flyby
+        traj_z = dr[2] + dv[2] * t_flyby
+
+        fig_3d = go.Figure()
+
+        # 1. The Asset (At Origin)
+        fig_3d.add_trace(go.Scatter3d(
+            x=[0], y=[0], z=[0], mode='markers+text',
+            marker=dict(size=6, color=COBJ1, symbol='diamond'),
+            text=["Asset"], textposition="top center", name="Asset", hoverinfo='skip'
+        ))
+
+        # 2. Hard-Body Radius (Protective Sphere)
+        u = np.linspace(0, 2 * np.pi, 30)
+        v = np.linspace(0, np.pi, 30)
+        R_hbr = R["R_hbr"]
+        x_sph = R_hbr * np.outer(np.cos(u), np.sin(v))
+        y_sph = R_hbr * np.outer(np.sin(u), np.sin(v))
+        z_sph = R_hbr * np.outer(np.ones(np.size(u)), np.cos(v))
+
+        fig_3d.add_trace(go.Surface(
+            x=x_sph, y=y_sph, z=z_sph,
+            colorscale=[[0, CRED], [1, CRED]], opacity=0.15,
+            showscale=False, hoverinfo='skip', name="Hard-Body Volume"
+        ))
+
+        # 3. Debris Trajectory Path
+        fig_3d.add_trace(go.Scatter3d(
+            x=traj_x, y=traj_y, z=traj_z, mode='lines',
+            line=dict(color=COBJ2, width=4, dash='solid'), name="Debris Trajectory"
+        ))
+
+        # 4. Debris Position at exact TCA
+        fig_3d.add_trace(go.Scatter3d(
+            x=[dr[0]], y=[dr[1]], z=[dr[2]], mode='markers+text',
+            marker=dict(size=5, color=COBJ2, symbol='circle'),
+            text=[f"Miss: {np.linalg.norm(dr):.1f}m"], textposition="bottom center", name="Debris at TCA"
+        ))
+
+        # 5. Miss Distance Connecting Vector
+        fig_3d.add_trace(go.Scatter3d(
+            x=[0, dr[0]], y=[0, dr[1]], z=[0, dr[2]], mode='lines',
+            line=dict(color=CRED, width=2, dash='dot'), name="Miss Vector"
+        ))
+
+        # Force a strictly 1:1:1 aspect ratio so the HBR sphere isn't squished into an oval
+        fig_3d.update_layout(
+            scene=dict(
+                xaxis=dict(title="ΔX (m)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                yaxis=dict(title="ΔY (m)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                zaxis=dict(title="ΔZ (m)", showgrid=True, gridcolor=BDR, color=CMUT, backgroundcolor=DARK),
+                bgcolor=DARK,
+                aspectmode='data' 
+            ),
+            plot_bgcolor=DARK, paper_bgcolor=DARK,
+            font=dict(color=CTXT, family='monospace'),
+            margin=dict(l=0, r=0, t=10, b=0),
+            legend=dict(bgcolor=CARD, bordercolor=BDR, yanchor="top", y=0.95, xanchor="left", x=0.05),
+            height=450
+        )
+        st.plotly_chart(fig_3d, use_container_width=True, theme=None)
 
 
 with tabs[2]:
