@@ -1366,7 +1366,70 @@ with tabs[4]:
             font=dict(family='monospace', color=CTXT)
         )
         st.plotly_chart(fig_anim, use_container_width=True, theme=None)
+        st.divider()
+        st.markdown("#### 📜 Algorithmic Pseudocode: IQAE Collision Estimation")
+        
+        st.markdown(r"""
+        This mathematical breakdown details exactly how the classical orbital uncertainty is mapped into a quantum state, and how the Iterative Quantum Amplitude Estimation (IQAE) algorithm bounds the final collision probability.
     
+        ---
+    
+        ##### **Phase 1: Discretization & State Preparation ($\mathcal{A}$)**
+        Before quantum estimation begins, the continuous Gaussian probability density function (PDF) of the relative position must be discretized into a finite quantum grid.
+    
+        **1. Grid Definition:**
+        Let $q_{dim}$ be the number of qubits per axis. The total spatial qubits $n = 2 \times q_{dim}$.
+        The grid resolution is $G = 2^{q_{dim}}$. We span a physical domain $\pm 4\max(\sigma_r, \sigma_s)$ around the mean $\mu$.
+    
+        **2. Probability Density Evaluation:**
+        For each cell $(i, j)$ in the $G \times G$ grid, representing physical coordinates $(r_i, s_j)$, we evaluate the bivariate normal distribution:
+        $$ p(r_i, s_j) = \frac{1}{2\pi\sigma_r\sigma_s} \exp\left( -\frac{1}{2} \left[ \frac{(r_i - \mu_r)^2}{\sigma_r^2} + \frac{(s_j - \mu_s)^2}{\sigma_s^2} \right] \right) $$
+    
+        **3. Normalization & Amplitude Generation:**
+        We normalize the discrete probabilities so they sum to exactly 1, accounting for the truncated tails of the Gaussian. The quantum amplitudes are the square roots of these probabilities:
+        $$ A_{i,j} = \sqrt{ \frac{p(r_i, s_j)}{\sum p(r, s)} } $$
+    
+        **4. The "Discrete Truth" ($P_{c, disc}$):**
+        The exact classical probability over this discretized grid is calculated as the sum of probabilities for all cells falling within the Hard Body Radius ($R_{hbr}$):
+        $$ P_{c, disc} = \sum_{r_i^2 + s_j^2 \le R_{hbr}^2} A_{i,j}^2 $$
+    
+        ---
+    
+        ##### **Phase 2: Oracle Construction ($\mathcal{U}_\omega$)**
+        We construct a quantum state operator $\mathcal{A}$ acting on $n$ spatial qubits and $1$ objective qubit:
+        $$ \mathcal{A} |0\rangle_n |0\rangle_{obj} = |\Psi\rangle $$
+    
+        The oracle evaluates the collision condition ($r^2 + s^2 \le R_{hbr}^2$). If true, a Multi-Controlled X-gate (MCX) flips the objective qubit to $|1\rangle$. This partitions the state into "Safe" and "Collision" superpositions:
+        $$ |\Psi\rangle = \sqrt{1 - a} |\Psi_{safe}\rangle |0\rangle_{obj} + \sqrt{a} |\Psi_{collision}\rangle |1\rangle_{obj} $$
+        
+        The target value we want to estimate is $a = P_c$.
+    
+        ---
+    
+        ##### **Phase 3: Iterative Amplitude Estimation (IQAE)**
+        IQAE avoids the costly Quantum Fourier Transform used in standard QAE by relying on purely classical statistical inference (Chernoff-Hoeffding bounds or Clopper-Pearson intervals) to refine the estimate.
+    
+        **1. Define the Grover Operator ($\mathcal{Q}$):**
+        $$ \mathcal{Q} = -\mathcal{A} \mathcal{S}_0 \mathcal{A}^{-1} \mathcal{S}_\chi $$
+        Where $\mathcal{S}_\chi$ reflects the objective qubit, and $\mathcal{S}_0$ reflects the zero state. Applying $\mathcal{Q}^k$ rotates the amplitude of the $|1\rangle$ state by $(2k + 1)\theta$, where $\sin^2(\theta) = a$.
+    
+        **2. The Iterative Loop:**
+        **Input:** Target precision $\epsilon$, Confidence level $1 - \alpha$.
+        **Initialize:** $k_0 = 0$, $i = 0$, Confidence Interval $[\theta_{min}, \theta_{max}] = [0, \pi/2]$.
+    
+        **WHILE** $(\sin^2(\theta_{max}) - \sin^2(\theta_{min})) / 2 > \epsilon$:
+        *   **Step A:** Determine the next power $k_i$. (Typically scaling by a growth rate, e.g., $k_i = \lfloor 2^{i/r} \rfloor$).
+        *   **Step B:** Prepare the state and apply the Grover operator: $\mathcal{Q}^{k_i} \mathcal{A} |0\rangle$.
+        *   **Step C:** Measure the objective qubit $N_{shots}$ times. Let $h_i$ be the number of $|1\rangle$ measurements.
+        *   **Step D:** The measured probability $P_1 = h_i / N_{shots}$ estimates $\sin^2((2k_i + 1)\theta)$.
+        *   **Step E:** Use Bayesian updating or exact confidence bounds to narrow $[\theta_{min}, \theta_{max}]$ based on $P_1$ at the required $\alpha$ level.
+        *   **Step F:** $i = i + 1$.
+    
+        **3. Final Output:**
+        The final estimate is the midpoint of the bounded interval:
+        $$ \hat{P}_c = \frac{\sin^2(\theta_{max}) + \sin^2(\theta_{min})}{2} $$
+        $$ \text{Error Margin} = \frac{\sin^2(\theta_{max}) - \sin^2(\theta_{min})}{2} \le \epsilon $$
+        """)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 5 — MISSION DECISION (COLA Operational Control)
