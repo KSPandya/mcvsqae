@@ -1366,6 +1366,7 @@ with tabs[4]:
             font=dict(family='monospace', color=CTXT)
         )
         st.plotly_chart(fig_anim, use_container_width=True, theme=None)
+        """
         st.divider()
         st.markdown("#### 📜 Algorithmic Pseudocode: IQAE Collision Estimation")
         
@@ -1430,7 +1431,7 @@ with tabs[4]:
         $$ \hat{P}_c = \frac{\sin^2(\theta_{max}) + \sin^2(\theta_{min})}{2} $$
         $$ \text{Error Margin} = \frac{\sin^2(\theta_{max}) - \sin^2(\theta_{min})}{2} \le \epsilon $$
         """)
-
+        """
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 5 — MISSION DECISION (COLA Operational Control)
 # ══════════════════════════════════════════════════════════════════════════════
